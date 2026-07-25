@@ -123,6 +123,21 @@ export default function AdminTripsPage() {
                 <p>Dropped off: {formatTime(trip.dropoff_at || trip.completed_at)}</p>
               </div>
 
+              <div className="border-t border-gray-100 pt-2 grid grid-cols-1 gap-1 text-sm text-gray-600">
+                <p>
+                  Pickup location:{' '}
+                  {trip.pickup_lat && trip.pickup_lng
+                    ? `${Number(trip.pickup_lat).toFixed(5)}, ${Number(trip.pickup_lng).toFixed(5)}`
+                    : '—'}
+                </p>
+                <p>
+                  Drop-off location:{' '}
+                  {trip.dropoff_lat && trip.dropoff_lng
+                    ? `${Number(trip.dropoff_lat).toFixed(5)}, ${Number(trip.dropoff_lng).toFixed(5)}`
+                    : '—'}
+                </p>
+              </div>
+
               <div className="border-t border-gray-100 pt-2 flex justify-between text-sm text-gray-600">
                 <p>Distance: {Number(trip.distance_km || 0).toFixed(2)} km</p>
                 <p>Amount: ₱{Number(trip.fare || 0).toFixed(2)}</p>
