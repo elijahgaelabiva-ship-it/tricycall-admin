@@ -17,11 +17,40 @@ export default function AdminTripsPage() {
         .order('requested_at', { ascending: false })
         .limit(50)
 
-      setTrips(data || [])
+      const tripsData = data || []
+
+      // Pull in passenger + driver names/phones in one extra query rather
+      // than relying on a specific foreign-key relationship name, so this
+      // works regardless of how the profiles/drivers relations are set up.
+      const passengerIds = [...new Set(tripsData.map((t) => t.passenger_id).filter(Boolean))]
+      const driverIds = [...new Set(tripsData.map((t) => t.driver_id).filter(Boolean))]
+      const allProfileIds = [...new Set([...passengerIds, ...driverIds])]
+
+      let profilesById = {}
+      if (allProfileIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, phone')
+          .in('id', allProfileIds)
+
+        profilesById = Object.fromEntries((profiles || []).map((p) => [p.id, p]))
+      }
+
+      const merged = tripsData.map((t) => ({
+        ...t,
+        passengerProfile: profilesById[t.passenger_id] || null,
+        driverProfile: profilesById[t.driver_id] || null,
+      }))
+
+      setTrips(merged)
       setLoading(false)
     }
     loadTrips()
   }, [])
+
+  // Some timestamp columns (e.g. pickup/drop-off) may not exist on every
+  // deployment's trips table — render "—" instead of crashing if missing.
+  const formatTime = (value) => (value ? new Date(value).toLocaleString() : '—')
 
   const statusColors = {
     requested: 'text-gray-500',
@@ -60,22 +89,44 @@ export default function AdminTripsPage() {
           {trips.map((trip) => (
             <div
               key={trip.id}
-              className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
+              className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-2"
             >
-              <div className="flex justify-between items-center mb-1">
+              <div className="flex justify-between items-center">
                 <span className={`font-semibold capitalize ${statusColors[trip.status]}`}>
                   {trip.status}
                 </span>
-                <span className="text-sm text-gray-400">
-                  {new Date(trip.requested_at).toLocaleString()}
+                <span className="font-semibold text-green-700">
+                  ₱{Number(trip.fare || 0).toFixed(2)}
                 </span>
               </div>
-              <p className="text-sm text-gray-600">
-                Distance: {Number(trip.distance_km || 0).toFixed(2)} km
-              </p>
-              <p className="font-semibold text-green-700">
-                ₱{Number(trip.fare || 0).toFixed(2)}
-              </p>
+
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
+                <div>
+                  <p className="text-xs text-gray-400">Passenger</p>
+                  <p className="text-gray-700">
+                    {trip.passengerProfile?.full_name || 'Unknown'}
+                  </p>
+                  <p className="text-xs text-gray-500">{trip.passengerProfile?.phone}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">Driver</p>
+                  <p className="text-gray-700">
+                    {trip.driverProfile?.full_name || (trip.driver_id ? 'Unknown' : 'Not assigned')}
+                  </p>
+                  <p className="text-xs text-gray-500">{trip.driverProfile?.phone}</p>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100 pt-2 grid grid-cols-1 gap-1 text-sm text-gray-600">
+                <p>Requested: {formatTime(trip.requested_at)}</p>
+                <p>Picked up: {formatTime(trip.pickup_at || trip.arrived_at || trip.started_at)}</p>
+                <p>Dropped off: {formatTime(trip.dropoff_at || trip.completed_at)}</p>
+              </div>
+
+              <div className="border-t border-gray-100 pt-2 flex justify-between text-sm text-gray-600">
+                <p>Distance: {Number(trip.distance_km || 0).toFixed(2)} km</p>
+                <p>Amount: ₱{Number(trip.fare || 0).toFixed(2)}</p>
+              </div>
             </div>
           ))}
         </div>
