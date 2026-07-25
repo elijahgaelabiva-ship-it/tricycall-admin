@@ -17,7 +17,7 @@ export default function ManageDriversPage() {
   const loadDrivers = async () => {
     const { data: driversData } = await supabase
       .from('drivers')
-      .select('*, profiles(full_name, phone)')
+      .select('*, profiles(full_name, phone, avatar_url)')
       .order('created_at', { ascending: false })
 
     const { data: vehiclesData } = await supabase
@@ -78,41 +78,55 @@ export default function ManageDriversPage() {
           {drivers.map((driver) => (
             <div
               key={driver.id}
-              className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
+              className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex gap-3"
             >
-              <p className="font-semibold text-gray-800">
-                {driver.profiles?.full_name || 'Unknown'}
-              </p>
-              <p className="text-sm text-gray-500">{driver.profiles?.phone}</p>
-              <p className="text-sm text-gray-500">
-                License: {driver.license_number}
-              </p>
-              <p className="text-sm text-gray-500">
-                Vehicle: {driver.vehicle?.model || 'N/A'} ({driver.vehicle?.plate_number || 'N/A'})
-              </p>
-              <div className="flex justify-between items-center mt-3">
-                <span
-                  className={`text-sm font-semibold ${
-                    driver.is_approved ? 'text-green-600' : 'text-orange-500'
-                  }`}
-                >
-                  {driver.is_approved ? 'Approved' : 'Pending'}
-                </span>
-                <button
-                  onClick={() => toggleApproval(driver.id, driver.is_approved)}
-                  disabled={updating === driver.id}
-                  className={`text-sm font-semibold px-4 py-2 rounded-lg transition disabled:opacity-50 ${
-                    driver.is_approved
-                      ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      : 'bg-green-600 text-white hover:bg-green-700'
-                  }`}
-                >
-                  {updating === driver.id
-                    ? 'Updating...'
-                    : driver.is_approved
-                    ? 'Suspend'
-                    : 'Approve'}
-                </button>
+              {driver.profiles?.avatar_url ? (
+                <img
+                  src={driver.profiles.avatar_url}
+                  alt={driver.profiles?.full_name || 'Driver photo'}
+                  className="w-14 h-14 rounded-full object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-xl flex-shrink-0">
+                  {driver.profiles?.full_name?.charAt(0).toUpperCase() || '?'}
+                </div>
+              )}
+
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-800">
+                  {driver.profiles?.full_name || 'Unknown'}
+                </p>
+                <p className="text-sm text-gray-500">{driver.profiles?.phone}</p>
+                <p className="text-sm text-gray-500">
+                  License: {driver.license_number}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Vehicle: {driver.vehicle?.model || 'N/A'} ({driver.vehicle?.plate_number || 'N/A'})
+                </p>
+                <div className="flex justify-between items-center mt-3">
+                  <span
+                    className={`text-sm font-semibold ${
+                      driver.is_approved ? 'text-green-600' : 'text-orange-500'
+                    }`}
+                  >
+                    {driver.is_approved ? 'Approved' : 'Pending'}
+                  </span>
+                  <button
+                    onClick={() => toggleApproval(driver.id, driver.is_approved)}
+                    disabled={updating === driver.id}
+                    className={`text-sm font-semibold px-4 py-2 rounded-lg transition disabled:opacity-50 ${
+                      driver.is_approved
+                        ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        : 'bg-green-600 text-white hover:bg-green-700'
+                    }`}
+                  >
+                    {updating === driver.id
+                      ? 'Updating...'
+                      : driver.is_approved
+                      ? 'Suspend'
+                      : 'Approve'}
+                  </button>
+                </div>
               </div>
             </div>
           ))}
