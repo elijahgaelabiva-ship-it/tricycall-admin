@@ -1,16 +1,49 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import CardList from '@/components/CardList'
+import DriverDetails from '@/components/DriverDetails'
+import PassengerDetails from '@/components/PassengerDetails'
+import TripDetails from '@/components/TripDetails'
+import ReviewsPanel from '@/components/ReviewsPanel'
+import ComplaintsPanel from '@/components/ComplaintsPanel'
+
+const CARD_LABELS = {
+  totalDrivers: 'Total Drivers',
+  activeDrivers: 'Active Drivers',
+  totalPassengers: 'Passengers',
+  activeTrips: 'Active Trips',
+  completedTrips: 'Completed Trips',
+  cancelledTrips: 'Cancelled Trips',
+  reviews: 'Reviews',
+  complaints: 'Complaints',
+}
+
+function viewTitle(view) {
+  switch (view.type) {
+    case 'list':
+      return CARD_LABELS[view.key]
+    case 'driver':
+      return 'Driver details'
+    case 'passenger':
+      return 'Passenger profile'
+    case 'trip':
+      return 'Trip details'
+    case 'driverReviews':
+      return 'Driver reviews'
+    default:
+      return ''
+  }
+}
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [activeCard, setActiveCard] = useState(null)
-  const [detailItems, setDetailItems] = useState([])
-  const [detailLoading, setDetailLoading] = useState(false)
-  const [detailError, setDetailError] = useState('')
+  // Navigation inside the details window: list -> driver / passenger / trip ...
+  const [stack, setStack] = useState([])
+  const cacheRef = useRef({})
   const router = useRouter()
 
   useEffect(() => {
@@ -42,6 +75,8 @@ export default function AdminDashboard() {
         { count: activeTrips },
         { count: completedTrips },
         { count: cancelledTrips },
+        { count: reviews },
+        { count: complaints },
       ] = await Promise.all([
         supabase.from('drivers').select('*', { count: 'exact', head: true }),
         supabase.from('drivers').select('*', { count: 'exact', head: true }).eq('is_online', true),
@@ -49,6 +84,9 @@ export default function AdminDashboard() {
         supabase.from('trips').select('*', { count: 'exact', head: true }).in('status', ['accepted', 'arrived', 'ongoing']),
         supabase.from('trips').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
         supabase.from('trips').select('*', { count: 'exact', head: true }).eq('status', 'cancelled'),
+        supabase.from('ratings').select('*', { count: 'exact', head: true }),
+        // Open (unresolved) complaints
+        supabase.from('trip_reports').select('*', { count: 'exact', head: true }).eq('resolved', false),
       ])
 
       setStats({
@@ -58,6 +96,8 @@ export default function AdminDashboard() {
         activeTrips,
         completedTrips,
         cancelledTrips,
+        reviews,
+        complaints,
       })
       setLoading(false)
     }
@@ -65,85 +105,23 @@ export default function AdminDashboard() {
     loadStats()
   }, [router])
 
-  // Given rows that have an id referencing profiles(id), attach full_name/phone
-  const attachProfileInfo = async (rows, idField = 'id') => {
-    const ids = [...new Set(rows.map((r) => r[idField]).filter(Boolean))]
-    if (ids.length === 0) return rows
-
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, full_name, phone')
-      .in('id', ids)
-
-    const byId = Object.fromEntries((profiles || []).map((p) => [p.id, p]))
-    return rows.map((r) => ({ ...r, profile: byId[r[idField]] || null }))
+  const refreshComplaintCount = async () => {
+    const { count } = await supabase
+      .from('trip_reports')
+      .select('*', { count: 'exact', head: true })
+      .eq('resolved', false)
+    setStats((prev) => (prev ? { ...prev, complaints: count } : prev))
   }
 
-  const loadCardDetails = async (cardKey) => {
-    setActiveCard(cardKey)
-    setDetailLoading(true)
-    setDetailError('')
-    setDetailItems([])
-
-    try {
-      if (cardKey === 'totalDrivers' || cardKey === 'activeDrivers') {
-        let query = supabase
-          .from('drivers')
-          .select('id, is_online, is_approved')
-          .order('is_online', { ascending: false })
-
-        if (cardKey === 'activeDrivers') query = query.eq('is_online', true)
-
-        const { data, error } = await query
-        if (error) throw error
-
-        const withProfiles = await attachProfileInfo(data || [], 'id')
-        setDetailItems(withProfiles)
-      } else if (cardKey === 'totalPassengers') {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, full_name, phone, created_at')
-          .eq('role', 'passenger')
-          .order('created_at', { ascending: false })
-          .limit(100)
-
-        if (error) throw error
-        setDetailItems(data || [])
-      } else if (
-        cardKey === 'activeTrips' ||
-        cardKey === 'completedTrips' ||
-        cardKey === 'cancelledTrips'
-      ) {
-        const statusFilter =
-          cardKey === 'activeTrips'
-            ? ['accepted', 'arrived', 'ongoing']
-            : cardKey === 'completedTrips'
-            ? ['completed']
-            : ['cancelled']
-
-        const { data, error } = await supabase
-          .from('trips')
-          .select('id, passenger_id, driver_id, status, fare, distance_km, requested_at')
-          .in('status', statusFilter)
-          .order('requested_at', { ascending: false })
-          .limit(100)
-
-        if (error) throw error
-
-        const withPassengers = await attachProfileInfo(data || [], 'passenger_id')
-        setDetailItems(withPassengers)
-      }
-    } catch (err) {
-      setDetailError(err.message || 'Failed to load details.')
-    } finally {
-      setDetailLoading(false)
-    }
+  const openCard = (key) => {
+    cacheRef.current = {}
+    setStack([{ type: 'list', key }])
   }
-
-  const closeDetails = () => {
-    setActiveCard(null)
-    setDetailItems([])
-    setDetailError('')
+  const open = (view) => setStack((prev) => [...prev, view])
+  const back = () => setStack((prev) => prev.slice(0, -1))
+  const close = () => {
+    setStack([])
+    cacheRef.current = {}
   }
 
   if (loading) {
@@ -154,31 +132,36 @@ export default function AdminDashboard() {
     )
   }
 
-  const cards = [
-    { key: 'totalDrivers', label: 'Total Drivers', value: stats.totalDrivers },
-    { key: 'activeDrivers', label: 'Active Drivers', value: stats.activeDrivers },
-    { key: 'totalPassengers', label: 'Passengers', value: stats.totalPassengers },
-    { key: 'activeTrips', label: 'Active Trips', value: stats.activeTrips },
-    { key: 'completedTrips', label: 'Completed Trips', value: stats.completedTrips },
-    { key: 'cancelledTrips', label: 'Cancelled Trips', value: stats.cancelledTrips },
-  ]
+  const cards = Object.keys(CARD_LABELS).map((key) => ({
+    key,
+    label: CARD_LABELS[key],
+    value: stats[key],
+  }))
+
+  const view = stack[stack.length - 1]
 
   return (
     <div className="min-h-screen bg-white px-4 py-8">
-      <h1 className="text-2xl font-bold text-green-600 text-center mb-2">
-        Admin Dashboard
-      </h1>
+      <h1 className="text-2xl font-bold text-green-600 text-center mb-2">Admin Dashboard</h1>
       <p className="text-center text-gray-500 mb-8">TRICYCALL.SF</p>
 
       <div className="max-w-2xl mx-auto grid grid-cols-2 gap-4 mb-8">
         {cards.map((card) => (
           <button
-            key={card.label}
-            onClick={() => loadCardDetails(card.key)}
+            key={card.key}
+            onClick={() => openCard(card.key)}
             className="bg-white border border-gray-200 rounded-xl p-5 text-center shadow-sm hover:shadow-md hover:border-green-300 transition cursor-pointer"
           >
-            <p className="text-3xl font-bold text-green-700">{card.value}</p>
-            <p className="text-sm text-gray-500 mt-1">{card.label}</p>
+            <p
+              className={`text-3xl font-bold ${
+                card.key === 'complaints' && card.value > 0 ? 'text-red-600' : 'text-green-700'
+              }`}
+            >
+              {card.value ?? '—'}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              {card.key === 'complaints' ? 'Open Complaints' : card.label}
+            </p>
           </button>
         ))}
       </div>
@@ -204,94 +187,54 @@ export default function AdminDashboard() {
         </button>
       </div>
 
-      {activeCard && (
+      {view && (
         <div
-          className="fixed inset-0 flex items-center justify-center bg-black/40 px-4"
+          className="fixed inset-0 flex items-center justify-center bg-black/40 px-3"
           style={{ zIndex: 9999 }}
-          onClick={closeDetails}
+          onClick={close}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col"
+            className="bg-white rounded-2xl shadow-xl w-full max-w-lg h-[88vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
-              <h2 className="font-bold text-gray-800">
-                {cards.find((c) => c.key === activeCard)?.label}
-              </h2>
+            <div className="flex items-center gap-2 p-4 border-b border-gray-100">
+              {stack.length > 1 && (
+                <button
+                  onClick={back}
+                  className="text-green-700 font-semibold text-sm px-2 py-1 rounded-lg hover:bg-green-50"
+                  aria-label="Back"
+                >
+                  &larr; Back
+                </button>
+              )}
+              <h2 className="font-bold text-gray-800 flex-1 truncate">{viewTitle(view)}</h2>
               <button
-                onClick={closeDetails}
-                className="text-gray-400 text-2xl leading-none"
+                onClick={close}
+                className="text-gray-400 text-2xl leading-none px-1"
                 aria-label="Close"
               >
                 &times;
               </button>
             </div>
 
-            <div className="overflow-y-auto p-4 space-y-2">
-              {detailLoading && <p className="text-gray-500 text-sm">Loading...</p>}
-
-              {detailError && (
-                <p className="text-red-600 text-sm">{detailError}</p>
+            <div className="overflow-y-auto p-4 flex-1">
+              {view.type === 'list' && view.key === 'reviews' && (
+                <ReviewsPanel key="reviews" onOpen={open} />
               )}
-
-              {!detailLoading && !detailError && detailItems.length === 0 && (
-                <p className="text-gray-400 text-sm">No records found.</p>
+              {view.type === 'list' && view.key === 'complaints' && (
+                <ComplaintsPanel key="complaints" onOpen={open} onChanged={refreshComplaintCount} />
               )}
-
-              {!detailLoading &&
-                (activeCard === 'totalDrivers' || activeCard === 'activeDrivers') &&
-                detailItems.map((d) => (
-                  <div
-                    key={d.id}
-                    className="border border-gray-100 rounded-xl p-3 flex items-center justify-between"
-                  >
-                    <div>
-                      <p className="font-semibold text-gray-800">
-                        {d.profile?.full_name || 'Unknown'}
-                      </p>
-                      <p className="text-xs text-gray-500">{d.profile?.phone}</p>
-                    </div>
-                    <span
-                      className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                        d.is_online
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      {d.is_online ? 'Online' : 'Offline'}
-                    </span>
-                  </div>
-                ))}
-
-              {!detailLoading &&
-                activeCard === 'totalPassengers' &&
-                detailItems.map((p) => (
-                  <div key={p.id} className="border border-gray-100 rounded-xl p-3">
-                    <p className="font-semibold text-gray-800">{p.full_name}</p>
-                    <p className="text-xs text-gray-500">{p.phone}</p>
-                  </div>
-                ))}
-
-              {!detailLoading &&
-                (activeCard === 'activeTrips' ||
-                  activeCard === 'completedTrips' ||
-                  activeCard === 'cancelledTrips') &&
-                detailItems.map((t) => (
-                  <div key={t.id} className="border border-gray-100 rounded-xl p-3">
-                    <div className="flex items-center justify-between">
-                      <p className="font-semibold text-gray-800">
-                        {t.profile?.full_name || 'Unknown passenger'}
-                      </p>
-                      <p className="text-sm font-semibold text-green-700">
-                        ₱{Number(t.fare).toFixed(2)}
-                      </p>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      {Number(t.distance_km).toFixed(2)} km &middot;{' '}
-                      {new Date(t.requested_at).toLocaleString()}
-                    </p>
-                  </div>
-                ))}
+              {view.type === 'list' && view.key !== 'reviews' && view.key !== 'complaints' && (
+                <CardList key={view.key} cardKey={view.key} onOpen={open} cache={cacheRef} />
+              )}
+              {view.type === 'driver' && <DriverDetails key={view.id} id={view.id} onOpen={open} />}
+              {view.type === 'passenger' && (
+                <PassengerDetails key={view.id} id={view.id} onOpen={open} />
+              )}
+              {view.type === 'trip' && <TripDetails key={view.id} id={view.id} onOpen={open} />}
+              {view.type === 'driverReviews' && (
+                <ReviewsPanel key={`dr-${view.id}`} driverId={view.id} onOpen={open} />
+              )}
             </div>
           </div>
         </div>
