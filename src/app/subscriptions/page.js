@@ -306,9 +306,11 @@ export default function SubscriptionsPage() {
                       <p className="font-semibold text-gray-800 truncate">
                         {d.profile?.full_name || 'Unknown'}
                       </p>
-                      <p className="text-xs text-gray-500">
-                        {d.paid_until ? `Paid until ${formatDate(d.paid_until)}` : 'No payment yet'}
-                      </p>
+                      {d.paid_until && (
+                        <p className="text-xs text-gray-500">
+                          Paid until {formatDate(d.paid_until)}
+                        </p>
+                      )}
                       <span
                         className={`inline-block mt-1 text-xs font-semibold px-2 py-0.5 rounded-full ${d.status.className}`}
                       >
