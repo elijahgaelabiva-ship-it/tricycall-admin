@@ -180,6 +180,12 @@ export default function AdminDashboard() {
           View All Trips
         </button>
         <button
+          onClick={() => router.push('/subscriptions')}
+          className="w-full bg-white border border-gray-300 text-gray-700 rounded-xl py-3 font-semibold hover:bg-gray-50 transition"
+        >
+          Subscriptions
+        </button>
+        <button
           onClick={() => router.push('/fares')}
           className="w-full bg-white border border-gray-300 text-gray-700 rounded-xl py-3 font-semibold hover:bg-gray-50 transition"
         >
