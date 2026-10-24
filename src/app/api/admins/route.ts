@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
     email, password, email_confirm: true,
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  await admin.from("profiles").upsert({ id: data.user.id, role: "admin" });
   await admin.from("admin_roles").insert({ user_id: data.user.id, email, role });
   return NextResponse.json({ ok: true });
 }
