@@ -9,6 +9,7 @@ import PassengerDetails from '@/components/PassengerDetails'
 import TripDetails from '@/components/TripDetails'
 import ReviewsPanel from '@/components/ReviewsPanel'
 import ComplaintsPanel from '@/components/ComplaintsPanel'
+import AdminPanel from '@/components/AdminPanel'
 
 const CARD_LABELS = {
   totalDrivers: 'Total Drivers',
@@ -191,6 +192,11 @@ export default function AdminDashboard() {
         >
           Fare Settings
         </button>
+      </div>
+
+      {/* Only visible to the owner; renders nothing for everyone else */}
+      <div className="max-w-2xl mx-auto">
+        <AdminPanel />
       </div>
 
       {view && (
