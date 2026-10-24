@@ -94,3 +94,36 @@ export function cancellationInfo(trip) {
     tone: 'text-gray-700 bg-gray-100',
   }
 }
+
+// Today's date in the Philippines as YYYY-MM-DD
+export function manilaToday() {
+  return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10)
+}
+
+// Subscription status for a driver. `settings` is the subscription_settings row.
+export function subscriptionStatus(paidUntil, settings) {
+  const graceDays = Number(settings?.grace_days || 0)
+
+  if (!paidUntil) {
+    return { key: 'none', label: 'No payment yet', className: 'bg-gray-100 text-gray-600', daysLeft: null }
+  }
+
+  const daysLeft = Math.round((Date.parse(paidUntil) - Date.parse(manilaToday())) / 86400000)
+
+  if (daysLeft >= 0) {
+    return daysLeft <= 7
+      ? {
+          key: 'soon',
+          label: daysLeft === 0 ? 'Ends today' : `Ends in ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'}`,
+          className: 'bg-yellow-100 text-yellow-700',
+          daysLeft,
+        }
+      : { key: 'active', label: 'Active', className: 'bg-green-100 text-green-700', daysLeft }
+  }
+
+  if (-daysLeft <= graceDays) {
+    return { key: 'grace', label: 'Grace period', className: 'bg-orange-100 text-orange-700', daysLeft }
+  }
+
+  return { key: 'expired', label: 'Expired', className: 'bg-red-100 text-red-600', daysLeft }
+}
