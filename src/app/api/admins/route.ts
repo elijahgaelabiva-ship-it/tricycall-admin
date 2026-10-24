@@ -15,7 +15,15 @@ async function requireOwner(req: NextRequest) {
     .select("role").eq("user_id", user.id).single();
   return data?.role === "owner" ? user : null;
 }
-
+export async function GET(req: NextRequest) {
+  const owner = await requireOwner(req);
+  if (!owner) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const { data } = await admin
+    .from("admin_roles")
+    .select("*")
+    .order("created_at");
+  return NextResponse.json({ admins: data });
+}
 export async function POST(req: NextRequest) {
   const owner = await requireOwner(req);
   if (!owner) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
