@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import Avatar from '@/components/Avatar'
 import Stars from '@/components/Stars'
 import DetailRow from '@/components/DetailRow'
-import { formatDate, money } from '@/lib/adminData'
+import { formatDate, money, subscriptionStatus } from '@/lib/adminData'
 
 export default function DriverDetails({ id, onOpen }) {
   const [info, setInfo] = useState(null)
@@ -16,7 +16,7 @@ export default function DriverDetails({ id, onOpen }) {
 
     const load = async () => {
       try {
-        const [driverRes, profileRes, vehicleRes, ratingsRes, completedRes, cancelledRes] =
+        const [driverRes, profileRes, vehicleRes, ratingsRes, completedRes, cancelledRes, settingsRes] =
           await Promise.all([
             supabase.from('drivers').select('*').eq('id', id).maybeSingle(),
             supabase.from('profiles').select('*').eq('id', id).maybeSingle(),
@@ -28,6 +28,7 @@ export default function DriverDetails({ id, onOpen }) {
               .select('*', { count: 'exact', head: true })
               .eq('driver_id', id)
               .eq('status', 'cancelled'),
+            supabase.from('subscription_settings').select('*').eq('id', 1).maybeSingle(),
           ])
 
         if (driverRes.error) throw driverRes.error
@@ -48,6 +49,7 @@ export default function DriverDetails({ id, onOpen }) {
           completedCount: completed.length,
           earned: completed.reduce((sum, t) => sum + Number(t.fare || 0), 0),
           cancelledCount: cancelledRes.count || 0,
+          settings: settingsRes.data || null,
         })
       } catch (err) {
         if (!cancelled) setError(err.message || 'Could not load driver details.')
@@ -119,6 +121,21 @@ export default function DriverDetails({ id, onOpen }) {
         </DetailRow>
         <DetailRow label="Plate number">{vehicle?.plate_number || '—'}</DetailRow>
         <DetailRow label="Registered">{formatDate(driver.created_at || profile?.created_at)}</DetailRow>
+        {info.settings && (
+          <DetailRow label="Subscription">
+            {driver.paid_until ? `Paid until ${formatDate(driver.paid_until)}` : 'No payment yet'}
+            {(() => {
+              const status = subscriptionStatus(driver.paid_until, info.settings)
+              return (
+                <span
+                  className={`ml-2 text-xs font-semibold px-2 py-0.5 rounded-full ${status.className}`}
+                >
+                  {info.settings.required ? status.label : 'Not required yet'}
+                </span>
+              )
+            })()}
+          </DetailRow>
+        )}
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2 text-center">
