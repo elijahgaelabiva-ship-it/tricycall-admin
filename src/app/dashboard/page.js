@@ -42,6 +42,7 @@ function viewTitle(view) {
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [perms, setPerms] = useState({})
   // Navigation inside the details window: list -> driver / passenger / trip ...
   const [stack, setStack] = useState([])
   const cacheRef = useRef({})
@@ -67,6 +68,17 @@ export default function AdminDashboard() {
       if (profile?.role !== 'admin') {
         router.push('/login')
         return
+      }
+
+      const { data: ar } = await supabase
+        .from('admin_roles')
+        .select('role, permissions')
+        .eq('user_id', user.id)
+        .single()
+      if (ar?.role === 'owner') {
+        setPerms({ complaints: true, drivers: true, trips_edit: true, subscriptions: true, fares: true })
+      } else {
+        setPerms(ar?.permissions || {})
       }
 
       const [
@@ -168,30 +180,36 @@ export default function AdminDashboard() {
       </div>
 
       <div className="max-w-2xl mx-auto flex flex-col gap-3">
-        <button
-          onClick={() => router.push('/drivers')}
-          className="w-full bg-green-600 text-white rounded-xl py-3 font-semibold hover:bg-green-700 transition"
-        >
-          Manage Drivers
-        </button>
+        {perms.drivers && (
+          <button
+            onClick={() => router.push('/drivers')}
+            className="w-full bg-green-600 text-white rounded-xl py-3 font-semibold hover:bg-green-700 transition"
+          >
+            Manage Drivers
+          </button>
+        )}
         <button
           onClick={() => router.push('/trips')}
           className="w-full bg-white border border-gray-300 text-gray-700 rounded-xl py-3 font-semibold hover:bg-gray-50 transition"
         >
           View All Trips
         </button>
-        <button
-          onClick={() => router.push('/subscriptions')}
-          className="w-full bg-white border border-gray-300 text-gray-700 rounded-xl py-3 font-semibold hover:bg-gray-50 transition"
-        >
-          Subscriptions
-        </button>
-        <button
-          onClick={() => router.push('/fares')}
-          className="w-full bg-white border border-gray-300 text-gray-700 rounded-xl py-3 font-semibold hover:bg-gray-50 transition"
-        >
-          Fare Settings
-        </button>
+        {perms.subscriptions && (
+          <button
+            onClick={() => router.push('/subscriptions')}
+            className="w-full bg-white border border-gray-300 text-gray-700 rounded-xl py-3 font-semibold hover:bg-gray-50 transition"
+          >
+            Subscriptions
+          </button>
+        )}
+        {perms.fares && (
+          <button
+            onClick={() => router.push('/fares')}
+            className="w-full bg-white border border-gray-300 text-gray-700 rounded-xl py-3 font-semibold hover:bg-gray-50 transition"
+          >
+            Fare Settings
+          </button>
+        )}
       </div>
 
       {/* Only visible to the owner; renders nothing for everyone else */}
