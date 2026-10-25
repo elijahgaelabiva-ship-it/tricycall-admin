@@ -55,6 +55,8 @@ const ICONS = {
   logout:
     'M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75',
   chevron: 'M8.25 4.5l7.5 7.5-7.5 7.5',
+  camera:
+    'M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316zM16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z',
 }
 
 function Icon({ d, className = 'w-5 h-5' }) {
@@ -72,6 +74,87 @@ function Icon({ d, className = 'w-5 h-5' }) {
       <path d={d} />
     </svg>
   )
+}
+
+/* ---------- tricycle logo ----------
+   Uses /public/tricycle.png if you upload it, otherwise draws a tricycle. */
+function TricycleLogo({ className = 'w-8 h-8' }) {
+  const [failed, setFailed] = useState(false)
+  if (!failed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src="/tricycle.png"
+        alt="Tricycall"
+        className={`${className} object-contain`}
+        onError={() => setFailed(true)}
+      />
+    )
+  }
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 64 44"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      {/* sidecar */}
+      <path d="M5 30V19a4 4 0 014-4h14a6 6 0 016 6v9H5z" />
+      <path d="M12 15v-3h10" />
+      <path d="M28 30H36" />
+      {/* motorcycle */}
+      <path d="M34 30l6-11h8" />
+      <path d="M48 19l5 11" />
+      <path d="M44 15h8" />
+      <path d="M38 19h-4" />
+      {/* wheels */}
+      <circle cx="13" cy="34" r="5" />
+      <circle cx="35" cy="34" r="5" />
+      <circle cx="53" cy="34" r="5" />
+    </svg>
+  )
+}
+
+/* ---------- avatar ---------- */
+function Avatar({ url, initials, size = 'w-14 h-14', text = 'text-base' }) {
+  if (url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={url} alt="Profile" className={`${size} rounded-full object-cover bg-gray-100`} />
+    )
+  }
+  return (
+    <div
+      className={`${size} ${text} rounded-full bg-green-600 text-white font-bold flex items-center justify-center`}
+    >
+      {initials}
+    </div>
+  )
+}
+
+async function resizeImage(file, size = 320) {
+  const bitmap = await createImageBitmap(file)
+  const min = Math.min(bitmap.width, bitmap.height)
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')
+  ctx.drawImage(
+    bitmap,
+    (bitmap.width - min) / 2,
+    (bitmap.height - min) / 2,
+    min,
+    min,
+    0,
+    0,
+    size,
+    size
+  )
+  return new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.85))
 }
 
 /* ---------- styling maps (full class names so Tailwind keeps them) ---------- */
@@ -125,15 +208,53 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [perms, setPerms] = useState({})
-  const [me, setMe] = useState({ email: '', role: '' })
+  const [me, setMe] = useState({ email: '', role: '', avatar: '' })
+  const [uploading, setUploading] = useState(false)
+  const [photoMsg, setPhotoMsg] = useState('')
   // Navigation inside the details window: list -> driver / passenger / trip ...
   const [stack, setStack] = useState([])
   const cacheRef = useRef({})
+  const fileRef = useRef(null)
   const router = useRouter()
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  const handlePhoto = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    setPhotoMsg('')
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      const blob = await resizeImage(file)
+      const path = `${user.id}/avatar.jpg`
+      const { error: upErr } = await supabase.storage
+        .from('avatars')
+        .upload(path, blob, { upsert: true, contentType: 'image/jpeg' })
+      if (upErr) throw upErr
+      const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path)
+      const url = `${pub.publicUrl}?v=${Date.now()}`
+      const { data: sess } = await supabase.auth.getSession()
+      const res = await fetch('/api/me', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sess.session?.access_token}`,
+        },
+        body: JSON.stringify({ avatar_url: url }),
+      })
+      if (!res.ok) throw new Error('Could not save photo')
+      setMe((prev) => ({ ...prev, avatar: url }))
+    } catch (err) {
+      setPhotoMsg(err.message || 'Upload failed')
+    }
+    setUploading(false)
   }
 
   useEffect(() => {
@@ -164,7 +285,11 @@ export default function AdminDashboard() {
         headers: { Authorization: `Bearer ${sess.session?.access_token}` },
       })
       const meData = res.ok ? await res.json() : {}
-      setMe({ email: user.email || '', role: meData.role || 'admin' })
+      setMe({
+        email: user.email || '',
+        role: meData.role || 'admin',
+        avatar: meData.avatar_url || '',
+      })
       if (meData.role === 'owner') {
         setPerms({ complaints: true, drivers: true, trips_edit: true, subscriptions: true, fares: true })
       } else {
@@ -275,10 +400,10 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-gray-50 pb-10">
       {/* Top bar */}
       <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-gray-200">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-green-600 text-white font-bold flex items-center justify-center">
-              T
+            <div className="w-11 h-11 rounded-xl bg-green-50 text-green-600 flex items-center justify-center overflow-hidden">
+              <TricycleLogo className="w-9 h-9" />
             </div>
             <div className="leading-tight">
               <p className="text-sm font-bold text-gray-900">TRICYCALL.SF</p>
@@ -297,19 +422,44 @@ export default function AdminDashboard() {
 
       <main className="max-w-2xl mx-auto px-4 pt-5 space-y-6">
         {/* Profile card */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
-          <div className="w-12 h-12 shrink-0 rounded-full bg-green-600 text-white font-bold flex items-center justify-center">
-            {initials}
+        <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="relative shrink-0"
+              aria-label="Change profile photo"
+            >
+              <Avatar url={me.avatar} initials={initials} size="w-16 h-16" text="text-lg" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-white border border-gray-300 text-gray-600 flex items-center justify-center shadow">
+                <Icon d={ICONS.camera} className="w-3.5 h-3.5" />
+              </span>
+              {uploading && (
+                <span className="absolute inset-0 rounded-full bg-white/70 flex items-center justify-center">
+                  <span className="w-5 h-5 rounded-full border-2 border-green-200 border-t-green-600 animate-spin" />
+                </span>
+              )}
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhoto}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-gray-500">Signed in as</p>
+              <p className="text-sm font-semibold text-gray-900 truncate">{me.email}</p>
+              <span
+                className={`inline-block mt-1.5 text-[11px] font-bold uppercase tracking-wide px-2.5 py-0.5 rounded-full ring-1 ring-inset ${roleStyle}`}
+              >
+                {me.role}
+              </span>
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs text-gray-500">Signed in as</p>
-            <p className="text-sm font-semibold text-gray-900 truncate">{me.email}</p>
-          </div>
-          <span
-            className={`shrink-0 text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full ring-1 ring-inset ${roleStyle}`}
-          >
-            {me.role}
-          </span>
+          <p className="text-[11px] text-gray-400 mt-3">
+            {photoMsg ? <span className="text-red-600">{photoMsg}</span> : 'Tap your photo to change it.'}
+          </p>
         </div>
 
         {/* Stat groups */}
@@ -377,38 +527,31 @@ export default function AdminDashboard() {
         <AdminPanel />
       </main>
 
-      {/* Details window */}
+      {/* Details window: full screen */}
       {view && (
-        <div
-          className="fixed inset-0 flex items-end sm:items-center justify-center bg-black/40 sm:px-3"
-          style={{ zIndex: 9999 }}
-          onClick={close}
-        >
-          <div
-            className="bg-white rounded-t-3xl sm:rounded-2xl shadow-xl w-full max-w-lg h-[88vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-2 px-4 py-3.5 border-b border-gray-100">
-              {stack.length > 1 && (
-                <button
-                  onClick={back}
-                  className="text-green-700 font-semibold text-sm px-2.5 py-1 rounded-lg hover:bg-green-50"
-                  aria-label="Back"
-                >
-                  &larr; Back
-                </button>
-              )}
-              <h2 className="font-bold text-gray-900 flex-1 truncate">{viewTitle(view)}</h2>
+        <div className="fixed inset-0 bg-white flex flex-col" style={{ zIndex: 9999 }}>
+          <div className="flex items-center gap-2 px-4 h-14 shrink-0 border-b border-gray-200 bg-white">
+            {stack.length > 1 ? (
               <button
-                onClick={close}
-                className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 text-xl leading-none flex items-center justify-center hover:bg-gray-200"
-                aria-label="Close"
+                onClick={back}
+                className="text-green-700 font-semibold text-sm px-2.5 py-1.5 rounded-lg hover:bg-green-50"
+                aria-label="Back"
               >
-                &times;
+                &larr; Back
               </button>
-            </div>
+            ) : null}
+            <h2 className="font-bold text-gray-900 flex-1 truncate">{viewTitle(view)}</h2>
+            <button
+              onClick={close}
+              className="w-9 h-9 rounded-full bg-gray-100 text-gray-600 text-2xl leading-none flex items-center justify-center hover:bg-gray-200"
+              aria-label="Close"
+            >
+              &times;
+            </button>
+          </div>
 
-            <div className="overflow-y-auto p-4 flex-1">
+          <div className="overflow-y-auto p-4 flex-1 bg-gray-50">
+            <div className="max-w-2xl mx-auto">
               {view.type === 'list' && view.key === 'reviews' && (
                 <ReviewsPanel key="reviews" onOpen={open} />
               )}
