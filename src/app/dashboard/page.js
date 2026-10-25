@@ -70,15 +70,16 @@ export default function AdminDashboard() {
         return
       }
 
-      const { data: ar } = await supabase
-        .from('admin_roles')
-        .select('role, permissions')
-        .eq('user_id', user.id)
-        .single()
-      if (ar?.role === 'owner') {
+      // Read role/permissions through the server (reliable)
+      const { data: sess } = await supabase.auth.getSession()
+      const res = await fetch('/api/me', {
+        headers: { Authorization: `Bearer ${sess.session?.access_token}` },
+      })
+      const me = res.ok ? await res.json() : {}
+      if (me.role === 'owner') {
         setPerms({ complaints: true, drivers: true, trips_edit: true, subscriptions: true, fares: true })
       } else {
-        setPerms(ar?.permissions || {})
+        setPerms(me.permissions || {})
       }
 
       const [
