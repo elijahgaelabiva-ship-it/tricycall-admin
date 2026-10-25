@@ -40,7 +40,13 @@ export async function POST(req: NextRequest) {
     email, password, email_confirm: true,
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  await admin.from("profiles").upsert({ id: data.user.id, role: "admin" });
+    const { error: pErr } = await admin
+    .from("profiles")
+    .upsert({ id: data.user.id, role: "admin" });
+  if (pErr) {
+    await admin.auth.admin.deleteUser(data.user.id);
+    return NextResponse.json({ error: "Profile: " + pErr.message }, { status: 400 });
+  }
   await admin.from("admin_roles").insert({
     user_id: data.user.id, email, role, permissions: DEFAULTS[role],
   });
