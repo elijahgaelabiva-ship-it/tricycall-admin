@@ -11,6 +11,25 @@ import ReviewsPanel from '@/components/ReviewsPanel'
 import ComplaintsPanel from '@/components/ComplaintsPanel'
 import AdminPanel from '@/components/AdminPanel'
 
+/* =====================================================
+   COLOR PALETTE: change these to match driver/passenger
+   ===================================================== */
+const THEME = {
+  brand: '#16a34a', // main color (buttons, avatar, highlights)
+  brandDark: '#15803d', // hover / pressed
+  brandSoft: '#f0fdf4', // light tint behind icons
+  page: '#f9fafb', // page background
+  card: '#ffffff', // card background
+}
+
+const cssVars = {
+  '--brand': THEME.brand,
+  '--brand-dark': THEME.brandDark,
+  '--brand-soft': THEME.brandSoft,
+  '--page': THEME.page,
+  '--card': THEME.card,
+}
+
 const CARD_LABELS = {
   totalDrivers: 'Total Drivers',
   activeDrivers: 'Active Drivers',
@@ -102,16 +121,13 @@ function TricycleLogo({ className = 'w-8 h-8' }) {
       strokeLinejoin="round"
       className={className}
     >
-      {/* sidecar */}
       <path d="M5 30V19a4 4 0 014-4h14a6 6 0 016 6v9H5z" />
       <path d="M12 15v-3h10" />
       <path d="M28 30H36" />
-      {/* motorcycle */}
       <path d="M34 30l6-11h8" />
       <path d="M48 19l5 11" />
       <path d="M44 15h8" />
       <path d="M38 19h-4" />
-      {/* wheels */}
       <circle cx="13" cy="34" r="5" />
       <circle cx="35" cy="34" r="5" />
       <circle cx="53" cy="34" r="5" />
@@ -129,7 +145,7 @@ function Avatar({ url, initials, size = 'w-14 h-14', text = 'text-base' }) {
   }
   return (
     <div
-      className={`${size} ${text} rounded-full bg-green-600 text-white font-bold flex items-center justify-center`}
+      className={`${size} ${text} rounded-full bg-[color:var(--brand)] text-white font-bold flex items-center justify-center`}
     >
       {initials}
     </div>
@@ -159,7 +175,7 @@ async function resizeImage(file, size = 320) {
 
 /* ---------- styling maps (full class names so Tailwind keeps them) ---------- */
 const TONES = {
-  green: 'bg-green-50 text-green-600',
+  green: 'bg-[color:var(--brand-soft)] text-[color:var(--brand)]',
   emerald: 'bg-emerald-50 text-emerald-600',
   blue: 'bg-blue-50 text-blue-600',
   slate: 'bg-slate-100 text-slate-600',
@@ -354,8 +370,11 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 gap-3">
-        <div className="w-9 h-9 rounded-full border-4 border-green-200 border-t-green-600 animate-spin" />
+      <div
+        style={cssVars}
+        className="min-h-screen flex flex-col items-center justify-center bg-[color:var(--page)] gap-3"
+      >
+        <div className="w-9 h-9 rounded-full border-4 border-gray-200 border-t-[color:var(--brand)] animate-spin" />
         <p className="text-sm text-gray-500">Loading dashboard...</p>
       </div>
     )
@@ -397,12 +416,12 @@ export default function AdminDashboard() {
   ].filter(Boolean)
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
+    <div style={cssVars} className="min-h-screen w-full bg-[color:var(--page)] pb-10">
       {/* Top bar */}
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-gray-200">
-        <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-30 w-full bg-[color:var(--card)]/90 backdrop-blur border-b border-gray-200">
+        <div className="w-full px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-green-50 text-green-600 flex items-center justify-center overflow-hidden">
+            <div className="w-11 h-11 rounded-xl bg-[color:var(--brand-soft)] text-[color:var(--brand)] flex items-center justify-center overflow-hidden">
               <TricycleLogo className="w-9 h-9" />
             </div>
             <div className="leading-tight">
@@ -420,9 +439,9 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 pt-5 space-y-6">
+      <main className="w-full px-4 sm:px-6 lg:px-10 pt-5 space-y-6">
         {/* Profile card */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+        <div className="bg-[color:var(--card)] border border-gray-200 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center gap-3">
             <button
               onClick={() => fileRef.current?.click()}
@@ -436,7 +455,7 @@ export default function AdminDashboard() {
               </span>
               {uploading && (
                 <span className="absolute inset-0 rounded-full bg-white/70 flex items-center justify-center">
-                  <span className="w-5 h-5 rounded-full border-2 border-green-200 border-t-green-600 animate-spin" />
+                  <span className="w-5 h-5 rounded-full border-2 border-gray-200 border-t-[color:var(--brand)] animate-spin" />
                 </span>
               )}
             </button>
@@ -463,45 +482,47 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stat groups */}
-        {GROUPS.map((group) => (
-          <section key={group.title}>
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2 px-1">
-              {group.title}
-            </h2>
-            <div className={`grid ${group.cols} gap-3`}>
-              {group.items.map((item) => {
-                const value = stats[item.key]
-                const alert = item.key === 'complaints' && value > 0
-                return (
-                  <button
-                    key={item.key}
-                    onClick={() => openCard(item.key)}
-                    className={`text-left bg-white border rounded-2xl p-3.5 shadow-sm hover:shadow-md active:scale-[0.98] transition ${
-                      alert ? 'border-red-300' : 'border-gray-200'
-                    }`}
-                  >
-                    <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${TONES[item.tone]}`}
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {GROUPS.map((group) => (
+            <section key={group.title}>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2 px-1">
+                {group.title}
+              </h2>
+              <div className={`grid ${group.cols} gap-3`}>
+                {group.items.map((item) => {
+                  const value = stats[item.key]
+                  const alert = item.key === 'complaints' && value > 0
+                  return (
+                    <button
+                      key={item.key}
+                      onClick={() => openCard(item.key)}
+                      className={`text-left bg-[color:var(--card)] border rounded-2xl p-3.5 shadow-sm hover:shadow-md active:scale-[0.98] transition ${
+                        alert ? 'border-red-300' : 'border-gray-200'
+                      }`}
                     >
-                      <Icon d={item.icon} className="w-5 h-5" />
-                    </div>
-                    <p className={`text-2xl font-bold leading-none ${alert ? 'text-red-600' : 'text-gray-900'}`}>
-                      {value ?? '—'}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1.5">{item.label}</p>
-                  </button>
-                )
-              })}
-            </div>
-          </section>
-        ))}
+                      <div
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${TONES[item.tone]}`}
+                      >
+                        <Icon d={item.icon} className="w-5 h-5" />
+                      </div>
+                      <p className={`text-2xl font-bold leading-none ${alert ? 'text-red-600' : 'text-gray-900'}`}>
+                        {value ?? '—'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1.5">{item.label}</p>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
 
         {/* Quick actions */}
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2 px-1">
             Manage
           </h2>
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm divide-y divide-gray-100 overflow-hidden">
+          <div className="bg-[color:var(--card)] border border-gray-200 rounded-2xl shadow-sm divide-y divide-gray-100 overflow-hidden">
             {actions.map((a) => (
               <button
                 key={a.href}
@@ -529,12 +550,12 @@ export default function AdminDashboard() {
 
       {/* Details window: full screen */}
       {view && (
-        <div className="fixed inset-0 bg-white flex flex-col" style={{ zIndex: 9999 }}>
-          <div className="flex items-center gap-2 px-4 h-14 shrink-0 border-b border-gray-200 bg-white">
+        <div className="fixed inset-0 bg-[color:var(--card)] flex flex-col" style={{ zIndex: 9999 }}>
+          <div className="flex items-center gap-2 px-4 sm:px-6 lg:px-10 h-14 shrink-0 border-b border-gray-200 bg-[color:var(--card)]">
             {stack.length > 1 ? (
               <button
                 onClick={back}
-                className="text-green-700 font-semibold text-sm px-2.5 py-1.5 rounded-lg hover:bg-green-50"
+                className="text-[color:var(--brand-dark)] font-semibold text-sm px-2.5 py-1.5 rounded-lg hover:bg-[color:var(--brand-soft)]"
                 aria-label="Back"
               >
                 &larr; Back
@@ -550,8 +571,8 @@ export default function AdminDashboard() {
             </button>
           </div>
 
-          <div className="overflow-y-auto p-4 flex-1 bg-gray-50">
-            <div className="max-w-2xl mx-auto">
+          <div className="overflow-y-auto p-4 sm:px-6 lg:px-10 flex-1 bg-[color:var(--page)]">
+            <div className="w-full">
               {view.type === 'list' && view.key === 'reviews' && (
                 <ReviewsPanel key="reviews" onOpen={open} />
               )}
