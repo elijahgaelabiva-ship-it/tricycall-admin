@@ -66,28 +66,28 @@ export default function AdminPanel() {
   if (!isOwner) return null;
 
   return (
-    <section className="text-gray-800">
+    <section className="w-full text-gray-800">
       <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2 px-1">
         Manage Admins
       </h2>
 
       {/* Add admin */}
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 space-y-2.5 mb-3">
+      <div className="bg-[color:var(--card)] border border-gray-200 rounded-2xl shadow-sm p-4 space-y-2.5 mb-3 md:max-w-xl">
         <input
-          className="border border-gray-300 rounded-xl px-3 py-2.5 w-full text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          className="border border-gray-300 rounded-xl px-3 py-2.5 w-full text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--brand)]"
           placeholder="Email"
           value={form.email}
           onChange={e => setForm({ ...form, email: e.target.value })}
         />
         <input
-          className="border border-gray-300 rounded-xl px-3 py-2.5 w-full text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          className="border border-gray-300 rounded-xl px-3 py-2.5 w-full text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--brand)]"
           placeholder="Temporary password"
           type="password"
           value={form.password}
           onChange={e => setForm({ ...form, password: e.target.value })}
         />
         <select
-          className="border border-gray-300 rounded-xl px-3 py-2.5 w-full text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+          className="border border-gray-300 rounded-xl px-3 py-2.5 w-full text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[color:var(--brand)]"
           value={form.role}
           onChange={e => setForm({ ...form, role: e.target.value })}
         >
@@ -96,7 +96,7 @@ export default function AdminPanel() {
         </select>
         <button
           onClick={add}
-          className="bg-green-600 text-white px-4 py-3 rounded-xl w-full font-semibold hover:bg-green-700 transition"
+          className="bg-[color:var(--brand)] text-white px-4 py-3 rounded-xl w-full font-semibold hover:bg-[color:var(--brand-dark)] transition"
         >
           Add admin
         </button>
@@ -104,9 +104,12 @@ export default function AdminPanel() {
       </div>
 
       {/* Admin list */}
-      <div className="space-y-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {admins.map(a => (
-          <div key={a.user_id} className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 space-y-3">
+          <div
+            key={a.user_id}
+            className="bg-[color:var(--card)] border border-gray-200 rounded-2xl shadow-sm p-4 space-y-3"
+          >
             <div className="flex items-center gap-3">
               {a.avatar_url ? (
                 <img
@@ -115,7 +118,7 @@ export default function AdminPanel() {
                   className="w-10 h-10 rounded-full object-cover bg-gray-100 shrink-0"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-green-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-full bg-[color:var(--brand)] text-white text-xs font-bold flex items-center justify-center shrink-0">
                   {a.email.slice(0, 2).toUpperCase()}
                 </div>
               )}
