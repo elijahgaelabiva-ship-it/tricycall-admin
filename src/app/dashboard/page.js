@@ -39,6 +39,88 @@ function viewTitle(view) {
   }
 }
 
+/* ---------- icons (inline SVG paths) ---------- */
+const ICONS = {
+  user: 'M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z',
+  users:
+    'M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z',
+  check: 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+  x: 'M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+  bolt: 'M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z',
+  star: 'M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z',
+  warn: 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z',
+  list: 'M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm0 5.25h.007v.008H3.75V12zm0 5.25h.007v.008H3.75v-.008z',
+  card: 'M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z',
+  tag: 'M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3zM6 6h.008v.008H6V6z',
+  logout:
+    'M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75',
+  chevron: 'M8.25 4.5l7.5 7.5-7.5 7.5',
+}
+
+function Icon({ d, className = 'w-5 h-5' }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d={d} />
+    </svg>
+  )
+}
+
+/* ---------- styling maps (full class names so Tailwind keeps them) ---------- */
+const TONES = {
+  green: 'bg-green-50 text-green-600',
+  emerald: 'bg-emerald-50 text-emerald-600',
+  blue: 'bg-blue-50 text-blue-600',
+  slate: 'bg-slate-100 text-slate-600',
+  indigo: 'bg-indigo-50 text-indigo-600',
+  amber: 'bg-amber-50 text-amber-600',
+  red: 'bg-red-50 text-red-600',
+}
+
+const ROLE_STYLES = {
+  owner: 'bg-amber-100 text-amber-800 ring-amber-200',
+  support: 'bg-blue-100 text-blue-800 ring-blue-200',
+  viewer: 'bg-slate-100 text-slate-700 ring-slate-200',
+  admin: 'bg-slate-100 text-slate-700 ring-slate-200',
+}
+
+const GROUPS = [
+  {
+    title: 'Drivers',
+    cols: 'grid-cols-2',
+    items: [
+      { key: 'totalDrivers', label: 'Total drivers', icon: ICONS.user, tone: 'green' },
+      { key: 'activeDrivers', label: 'Online now', icon: ICONS.check, tone: 'emerald' },
+    ],
+  },
+  {
+    title: 'Trips',
+    cols: 'grid-cols-3',
+    items: [
+      { key: 'activeTrips', label: 'Active', icon: ICONS.bolt, tone: 'blue' },
+      { key: 'completedTrips', label: 'Completed', icon: ICONS.check, tone: 'green' },
+      { key: 'cancelledTrips', label: 'Cancelled', icon: ICONS.x, tone: 'slate' },
+    ],
+  },
+  {
+    title: 'Community',
+    cols: 'grid-cols-3',
+    items: [
+      { key: 'totalPassengers', label: 'Passengers', icon: ICONS.users, tone: 'indigo' },
+      { key: 'reviews', label: 'Reviews', icon: ICONS.star, tone: 'amber' },
+      { key: 'complaints', label: 'Open complaints', icon: ICONS.warn, tone: 'red' },
+    ],
+  },
+]
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -147,123 +229,179 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <p className="text-gray-500">Loading dashboard...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 gap-3">
+        <div className="w-9 h-9 rounded-full border-4 border-green-200 border-t-green-600 animate-spin" />
+        <p className="text-sm text-gray-500">Loading dashboard...</p>
       </div>
     )
   }
 
-  const cards = Object.keys(CARD_LABELS).map((key) => ({
-    key,
-    label: CARD_LABELS[key],
-    value: stats[key],
-  }))
-
   const view = stack[stack.length - 1]
+  const initials = (me.email || '?').slice(0, 2).toUpperCase()
+  const roleStyle = ROLE_STYLES[me.role] || ROLE_STYLES.admin
+
+  const actions = [
+    perms.drivers && {
+      label: 'Manage Drivers',
+      sub: 'Approve, edit and suspend drivers',
+      icon: ICONS.user,
+      tone: 'green',
+      href: '/drivers',
+    },
+    {
+      label: 'View All Trips',
+      sub: 'Browse every trip and its status',
+      icon: ICONS.list,
+      tone: 'blue',
+      href: '/trips',
+    },
+    perms.subscriptions && {
+      label: 'Subscriptions',
+      sub: 'Driver plans and payments',
+      icon: ICONS.card,
+      tone: 'indigo',
+      href: '/subscriptions',
+    },
+    perms.fares && {
+      label: 'Fare Settings',
+      sub: 'Rates and pricing rules',
+      icon: ICONS.tag,
+      tone: 'amber',
+      href: '/fares',
+    },
+  ].filter(Boolean)
 
   return (
-    <div className="min-h-screen bg-white px-4 py-8">
-      {/* Who is logged in + Log out */}
-      <div className="max-w-2xl mx-auto flex items-center justify-between gap-3 mb-6 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
-        <div className="min-w-0">
-          <p className="text-xs text-gray-500">Logged in as</p>
-          <p className="text-sm font-semibold text-gray-800 truncate">{me.email}</p>
-          <p className="text-xs font-semibold text-green-700 uppercase">{me.role}</p>
+    <div className="min-h-screen bg-gray-50 pb-10">
+      {/* Top bar */}
+      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-gray-200">
+        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-green-600 text-white font-bold flex items-center justify-center">
+              T
+            </div>
+            <div className="leading-tight">
+              <p className="text-sm font-bold text-gray-900">TRICYCALL.SF</p>
+              <p className="text-[11px] text-gray-500">Admin Dashboard</p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg px-3 py-1.5 hover:bg-gray-100 transition"
+          >
+            <Icon d={ICONS.logout} className="w-4 h-4" />
+            Log out
+          </button>
         </div>
-        <button
-          onClick={handleLogout}
-          className="shrink-0 bg-red-600 text-white text-sm font-semibold rounded-lg px-4 py-2 hover:bg-red-700 transition"
-        >
-          Log out
-        </button>
-      </div>
+      </header>
 
-      <h1 className="text-2xl font-bold text-green-600 text-center mb-2">Admin Dashboard</h1>
-      <p className="text-center text-gray-500 mb-8">TRICYCALL.SF</p>
-
-      <div className="max-w-2xl mx-auto grid grid-cols-2 gap-4 mb-8">
-        {cards.map((card) => (
-          <button
-            key={card.key}
-            onClick={() => openCard(card.key)}
-            className="bg-white border border-gray-200 rounded-xl p-5 text-center shadow-sm hover:shadow-md hover:border-green-300 transition cursor-pointer"
+      <main className="max-w-2xl mx-auto px-4 pt-5 space-y-6">
+        {/* Profile card */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
+          <div className="w-12 h-12 shrink-0 rounded-full bg-green-600 text-white font-bold flex items-center justify-center">
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-gray-500">Signed in as</p>
+            <p className="text-sm font-semibold text-gray-900 truncate">{me.email}</p>
+          </div>
+          <span
+            className={`shrink-0 text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full ring-1 ring-inset ${roleStyle}`}
           >
-            <p
-              className={`text-3xl font-bold ${
-                card.key === 'complaints' && card.value > 0 ? 'text-red-600' : 'text-green-700'
-              }`}
-            >
-              {card.value ?? '—'}
-            </p>
-            <p className="text-sm text-gray-500 mt-1">
-              {card.key === 'complaints' ? 'Open Complaints' : card.label}
-            </p>
-          </button>
+            {me.role}
+          </span>
+        </div>
+
+        {/* Stat groups */}
+        {GROUPS.map((group) => (
+          <section key={group.title}>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2 px-1">
+              {group.title}
+            </h2>
+            <div className={`grid ${group.cols} gap-3`}>
+              {group.items.map((item) => {
+                const value = stats[item.key]
+                const alert = item.key === 'complaints' && value > 0
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => openCard(item.key)}
+                    className={`text-left bg-white border rounded-2xl p-3.5 shadow-sm hover:shadow-md active:scale-[0.98] transition ${
+                      alert ? 'border-red-300' : 'border-gray-200'
+                    }`}
+                  >
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${TONES[item.tone]}`}
+                    >
+                      <Icon d={item.icon} className="w-5 h-5" />
+                    </div>
+                    <p className={`text-2xl font-bold leading-none ${alert ? 'text-red-600' : 'text-gray-900'}`}>
+                      {value ?? '—'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1.5">{item.label}</p>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
         ))}
-      </div>
 
-      <div className="max-w-2xl mx-auto flex flex-col gap-3">
-        {perms.drivers && (
-          <button
-            onClick={() => router.push('/drivers')}
-            className="w-full bg-green-600 text-white rounded-xl py-3 font-semibold hover:bg-green-700 transition"
-          >
-            Manage Drivers
-          </button>
-        )}
-        <button
-          onClick={() => router.push('/trips')}
-          className="w-full bg-white border border-gray-300 text-gray-700 rounded-xl py-3 font-semibold hover:bg-gray-50 transition"
-        >
-          View All Trips
-        </button>
-        {perms.subscriptions && (
-          <button
-            onClick={() => router.push('/subscriptions')}
-            className="w-full bg-white border border-gray-300 text-gray-700 rounded-xl py-3 font-semibold hover:bg-gray-50 transition"
-          >
-            Subscriptions
-          </button>
-        )}
-        {perms.fares && (
-          <button
-            onClick={() => router.push('/fares')}
-            className="w-full bg-white border border-gray-300 text-gray-700 rounded-xl py-3 font-semibold hover:bg-gray-50 transition"
-          >
-            Fare Settings
-          </button>
-        )}
-      </div>
+        {/* Quick actions */}
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2 px-1">
+            Manage
+          </h2>
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm divide-y divide-gray-100 overflow-hidden">
+            {actions.map((a) => (
+              <button
+                key={a.href}
+                onClick={() => router.push(a.href)}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50 active:bg-gray-100 transition"
+              >
+                <div
+                  className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center ${TONES[a.tone]}`}
+                >
+                  <Icon d={a.icon} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-900">{a.label}</p>
+                  <p className="text-xs text-gray-500 truncate">{a.sub}</p>
+                </div>
+                <Icon d={ICONS.chevron} className="w-4 h-4 text-gray-400" />
+              </button>
+            ))}
+          </div>
+        </section>
 
-      {/* Only visible to the owner; renders nothing for everyone else */}
-      <div className="max-w-2xl mx-auto">
+        {/* Owner only: renders nothing for everyone else */}
         <AdminPanel />
-      </div>
+      </main>
 
+      {/* Details window */}
       {view && (
         <div
-          className="fixed inset-0 flex items-center justify-center bg-black/40 px-3"
+          className="fixed inset-0 flex items-end sm:items-center justify-center bg-black/40 sm:px-3"
           style={{ zIndex: 9999 }}
           onClick={close}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl w-full max-w-lg h-[88vh] flex flex-col"
+            className="bg-white rounded-t-3xl sm:rounded-2xl shadow-xl w-full max-w-lg h-[88vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-2 p-4 border-b border-gray-100">
+            <div className="flex items-center gap-2 px-4 py-3.5 border-b border-gray-100">
               {stack.length > 1 && (
                 <button
                   onClick={back}
-                  className="text-green-700 font-semibold text-sm px-2 py-1 rounded-lg hover:bg-green-50"
+                  className="text-green-700 font-semibold text-sm px-2.5 py-1 rounded-lg hover:bg-green-50"
                   aria-label="Back"
                 >
                   &larr; Back
                 </button>
               )}
-              <h2 className="font-bold text-gray-800 flex-1 truncate">{viewTitle(view)}</h2>
+              <h2 className="font-bold text-gray-900 flex-1 truncate">{viewTitle(view)}</h2>
               <button
                 onClick={close}
-                className="text-gray-400 text-2xl leading-none px-1"
+                className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 text-xl leading-none flex items-center justify-center hover:bg-gray-200"
                 aria-label="Close"
               >
                 &times;
