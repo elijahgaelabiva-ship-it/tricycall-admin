@@ -18,6 +18,9 @@ const PERMS = [
   ["fares", "Fare settings"],
 ];
 
+const input =
+  "border border-[color:var(--line)] rounded-2xl px-4 py-3.5 w-full text-sm text-[color:var(--navy)] bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[color:var(--brand)]";
+
 export default function AdminPanel() {
   const [isOwner, setIsOwner] = useState(false);
   const [admins, setAdmins] = useState<Admin[]>([]);
@@ -66,28 +69,28 @@ export default function AdminPanel() {
   if (!isOwner) return null;
 
   return (
-    <section className="w-full text-gray-800">
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2 px-1">
+    <section className="w-full">
+      <h2 className="text-xs font-semibold uppercase tracking-wider text-[color:var(--muted)] mb-2 px-1">
         Manage Admins
       </h2>
 
       {/* Add admin */}
-      <div className="bg-[color:var(--card)] border border-gray-200 rounded-2xl shadow-sm p-4 space-y-2.5 mb-3 md:max-w-xl">
+      <div className="bg-[color:var(--card)] border border-[color:var(--line)] rounded-3xl shadow-sm p-5 space-y-3 mb-4 md:max-w-xl">
         <input
-          className="border border-gray-300 rounded-xl px-3 py-2.5 w-full text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--brand)]"
+          className={input}
           placeholder="Email"
           value={form.email}
           onChange={e => setForm({ ...form, email: e.target.value })}
         />
         <input
-          className="border border-gray-300 rounded-xl px-3 py-2.5 w-full text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--brand)]"
+          className={input}
           placeholder="Temporary password"
           type="password"
           value={form.password}
           onChange={e => setForm({ ...form, password: e.target.value })}
         />
         <select
-          className="border border-gray-300 rounded-xl px-3 py-2.5 w-full text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[color:var(--brand)]"
+          className={input}
           value={form.role}
           onChange={e => setForm({ ...form, role: e.target.value })}
         >
@@ -96,11 +99,11 @@ export default function AdminPanel() {
         </select>
         <button
           onClick={add}
-          className="bg-[color:var(--brand)] text-white px-4 py-3 rounded-xl w-full font-semibold hover:bg-[color:var(--brand-dark)] transition"
+          className="bg-[color:var(--brand)] text-[color:var(--navy)] px-4 py-4 rounded-full w-full text-base font-bold hover:bg-[color:var(--brand-dark)] active:scale-[0.99] transition"
         >
           Add admin
         </button>
-        {msg && <p className="text-sm text-gray-600">{msg}</p>}
+        {msg && <p className="text-sm text-[color:var(--muted)]">{msg}</p>}
       </div>
 
       {/* Admin list */}
@@ -108,25 +111,25 @@ export default function AdminPanel() {
         {admins.map(a => (
           <div
             key={a.user_id}
-            className="bg-[color:var(--card)] border border-gray-200 rounded-2xl shadow-sm p-4 space-y-3"
+            className="bg-[color:var(--card)] border border-[color:var(--line)] rounded-3xl shadow-sm p-4 space-y-3"
           >
             <div className="flex items-center gap-3">
               {a.avatar_url ? (
                 <img
                   src={a.avatar_url}
                   alt=""
-                  className="w-10 h-10 rounded-full object-cover bg-gray-100 shrink-0"
+                  className="w-11 h-11 rounded-full object-cover bg-gray-100 shrink-0"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-[color:var(--brand)] text-white text-xs font-bold flex items-center justify-center shrink-0">
+                <div className="w-11 h-11 rounded-full bg-[color:var(--brand)] text-[color:var(--navy)] text-xs font-bold flex items-center justify-center shrink-0">
                   {a.email.slice(0, 2).toUpperCase()}
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-gray-900 break-all">{a.email}</p>
+                <p className="text-sm font-bold text-[color:var(--navy)] break-all">{a.email}</p>
               </div>
               {a.role === "owner" && (
-                <span className="shrink-0 text-[11px] font-bold uppercase tracking-wide px-2.5 py-0.5 rounded-full ring-1 ring-inset bg-amber-100 text-amber-800 ring-amber-200">
+                <span className="shrink-0 text-[11px] font-bold uppercase tracking-wide px-3 py-0.5 rounded-full ring-1 ring-inset bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)] ring-orange-200">
                   Owner
                 </span>
               )}
@@ -137,7 +140,7 @@ export default function AdminPanel() {
                 <div className="flex items-center justify-between gap-2">
                   <select
                     value={a.role}
-                    className="border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm bg-white"
+                    className="border border-[color:var(--line)] rounded-xl px-3 py-2 text-sm bg-white text-[color:var(--navy)]"
                     onChange={async e => {
                       await call("PATCH", { user_id: a.user_id, role: e.target.value });
                       load(token);
@@ -147,7 +150,7 @@ export default function AdminPanel() {
                     <option value="support">Support</option>
                   </select>
                   <button
-                    className="text-sm font-medium text-red-600 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50"
+                    className="text-sm font-semibold text-red-600 border border-red-200 rounded-full px-4 py-2 hover:bg-red-50"
                     onClick={async () => {
                       if (confirm("Remove this admin?")) {
                         await call("DELETE", { user_id: a.user_id });
@@ -159,14 +162,14 @@ export default function AdminPanel() {
                   </button>
                 </div>
 
-                <div className="border border-gray-200 rounded-xl divide-y divide-gray-100 overflow-hidden">
+                <div className="border border-[color:var(--line)] rounded-2xl divide-y divide-slate-100 overflow-hidden">
                   {PERMS.map(([key, label]) => (
                     <button
                       key={key}
                       onClick={() => toggle(a, key)}
-                      className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-gray-50 active:bg-gray-100"
+                      className="w-full flex items-center justify-between px-4 py-3 text-sm hover:bg-slate-50 active:bg-slate-100"
                     >
-                      <span className="text-gray-700">{label}</span>
+                      <span className="text-[color:var(--navy)]">{label}</span>
                       <span className="text-lg">{a.permissions?.[key] ? "✅" : "❌"}</span>
                     </button>
                   ))}
