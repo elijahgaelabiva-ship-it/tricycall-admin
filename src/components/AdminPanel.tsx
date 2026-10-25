@@ -1,8 +1,21 @@
 "use client";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase"; // use the same import your dashboard uses
+import { supabase } from "@/lib/supabase";
 
-type Admin = { user_id: string; email: string; role: string };
+type Admin = {
+  user_id: string;
+  email: string;
+  role: string;
+  permissions: Record<string, boolean>;
+};
+
+const PERMS = [
+  ["complaints", "Resolve complaints"],
+  ["drivers", "Manage drivers"],
+  ["trips_edit", "Cancel / edit trips"],
+  ["subscriptions", "Subscriptions"],
+  ["fares", "Fare settings"],
+];
 
 export default function AdminPanel() {
   const [isOwner, setIsOwner] = useState(false);
@@ -22,7 +35,7 @@ export default function AdminPanel() {
 
   async function load(t: string) {
     const res = await fetch("/api/admins", { headers: { Authorization: `Bearer ${t}` } });
-    if (!res.ok) return; // not the owner: stay hidden
+    if (!res.ok) return;
     setAdmins((await res.json()).admins ?? []);
     setIsOwner(true);
   }
@@ -41,6 +54,12 @@ export default function AdminPanel() {
     setMsg(r.error ?? "Admin added");
     if (!r.error) setForm({ email: "", password: "", role: "viewer" });
     load(token);
+  }
+
+  async function toggle(a: Admin, key: string) {
+    const next = { ...a.permissions, [key]: !a.permissions?.[key] };
+    setAdmins(prev => prev.map(x => x.user_id === a.user_id ? { ...x, permissions: next } : x));
+    await call("PATCH", { user_id: a.user_id, permissions: next });
   }
 
   if (!isOwner) return null;
@@ -67,22 +86,36 @@ export default function AdminPanel() {
       </div>
 
       {admins.map(a => (
-        <div key={a.user_id} className="border rounded-xl p-3 bg-white flex items-center justify-between gap-2">
-          <div className="text-sm break-all">{a.email}</div>
-          {a.role === "owner" ? (
-            <span className="text-xs font-semibold">OWNER</span>
-          ) : (
-            <div className="flex gap-2">
-              <select value={a.role} className="border p-1 rounded"
-                onChange={async e => { await call("PATCH", { user_id: a.user_id, role: e.target.value }); load(token); }}>
-                <option value="viewer">Viewer</option>
-                <option value="support">Support</option>
-              </select>
-              <button className="text-red-600"
-                onClick={async () => { if (confirm("Remove this admin?")) { await call("DELETE", { user_id: a.user_id }); load(token); } }}>
-                Remove
-              </button>
-            </div>
+        <div key={a.user_id} className="border rounded-xl p-3 bg-white space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-sm break-all">{a.email}</div>
+            {a.role === "owner" && <span className="text-xs font-semibold">OWNER</span>}
+          </div>
+
+          {a.role !== "owner" && (
+            <>
+              <div className="flex items-center justify-between gap-2">
+                <select value={a.role} className="border p-1 rounded text-sm"
+                  onChange={async e => { await call("PATCH", { user_id: a.user_id, role: e.target.value }); load(token); }}>
+                  <option value="viewer">Viewer</option>
+                  <option value="support">Support</option>
+                </select>
+                <button className="text-red-600 text-sm"
+                  onClick={async () => { if (confirm("Remove this admin?")) { await call("DELETE", { user_id: a.user_id }); load(token); } }}>
+                  Remove
+                </button>
+              </div>
+
+              <div className="divide-y border rounded-lg">
+                {PERMS.map(([key, label]) => (
+                  <button key={key} onClick={() => toggle(a, key)}
+                    className="w-full flex items-center justify-between px-3 py-2 text-sm">
+                    <span>{label}</span>
+                    <span className="text-lg">{a.permissions?.[key] ? "✅" : "❌"}</span>
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </div>
       ))}
