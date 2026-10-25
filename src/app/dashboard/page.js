@@ -43,10 +43,16 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [perms, setPerms] = useState({})
+  const [me, setMe] = useState({ email: '', role: '' })
   // Navigation inside the details window: list -> driver / passenger / trip ...
   const [stack, setStack] = useState([])
   const cacheRef = useRef({})
   const router = useRouter()
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
 
   useEffect(() => {
     const loadStats = async () => {
@@ -75,11 +81,12 @@ export default function AdminDashboard() {
       const res = await fetch('/api/me', {
         headers: { Authorization: `Bearer ${sess.session?.access_token}` },
       })
-      const me = res.ok ? await res.json() : {}
-      if (me.role === 'owner') {
+      const meData = res.ok ? await res.json() : {}
+      setMe({ email: user.email || '', role: meData.role || 'admin' })
+      if (meData.role === 'owner') {
         setPerms({ complaints: true, drivers: true, trips_edit: true, subscriptions: true, fares: true })
       } else {
-        setPerms(me.permissions || {})
+        setPerms(meData.permissions || {})
       }
 
       const [
@@ -156,6 +163,21 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-white px-4 py-8">
+      {/* Who is logged in + Log out */}
+      <div className="max-w-2xl mx-auto flex items-center justify-between gap-3 mb-6 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+        <div className="min-w-0">
+          <p className="text-xs text-gray-500">Logged in as</p>
+          <p className="text-sm font-semibold text-gray-800 truncate">{me.email}</p>
+          <p className="text-xs font-semibold text-green-700 uppercase">{me.role}</p>
+        </div>
+        <button
+          onClick={handleLogout}
+          className="shrink-0 bg-red-600 text-white text-sm font-semibold rounded-lg px-4 py-2 hover:bg-red-700 transition"
+        >
+          Log out
+        </button>
+      </div>
+
       <h1 className="text-2xl font-bold text-green-600 text-center mb-2">Admin Dashboard</h1>
       <p className="text-center text-gray-500 mb-8">TRICYCALL.SF</p>
 
