@@ -12,22 +12,28 @@ import ComplaintsPanel from '@/components/ComplaintsPanel'
 import AdminPanel from '@/components/AdminPanel'
 
 /* =====================================================
-   COLOR PALETTE: change these to match driver/passenger
+   COLOR PALETTE (matches the passenger app)
    ===================================================== */
 const THEME = {
-  brand: '#16a34a', // main color (buttons, avatar, highlights)
-  brandDark: '#15803d', // hover / pressed
-  brandSoft: '#f0fdf4', // light tint behind icons
-  page: '#f9fafb', // page background
+  navy: '#17202b', // dark header
+  brand: '#fb8500', // orange buttons / highlights
+  brandDark: '#e07600', // pressed / hover
+  brandSoft: '#fff1e0', // light orange tint
+  page: '#ebf1f4', // page background
   card: '#ffffff', // card background
+  line: '#cdd8de', // borders
+  muted: '#64748b', // secondary text
 }
 
 const cssVars = {
+  '--navy': THEME.navy,
   '--brand': THEME.brand,
   '--brand-dark': THEME.brandDark,
   '--brand-soft': THEME.brandSoft,
   '--page': THEME.page,
   '--card': THEME.card,
+  '--line': THEME.line,
+  '--muted': THEME.muted,
 }
 
 const CARD_LABELS = {
@@ -74,6 +80,7 @@ const ICONS = {
   logout:
     'M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75',
   chevron: 'M8.25 4.5l7.5 7.5-7.5 7.5',
+  back: 'M15.75 19.5L8.25 12l7.5-7.5',
   camera:
     'M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316zM16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z',
 }
@@ -140,12 +147,16 @@ function Avatar({ url, initials, size = 'w-14 h-14', text = 'text-base' }) {
   if (url) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={url} alt="Profile" className={`${size} rounded-full object-cover bg-gray-100`} />
+      <img
+        src={url}
+        alt="Profile"
+        className={`${size} rounded-full object-cover bg-gray-100 ring-4 ring-[color:var(--brand-soft)]`}
+      />
     )
   }
   return (
     <div
-      className={`${size} ${text} rounded-full bg-[color:var(--brand)] text-white font-bold flex items-center justify-center`}
+      className={`${size} ${text} rounded-full bg-[color:var(--brand)] text-[color:var(--navy)] font-bold flex items-center justify-center ring-4 ring-[color:var(--brand-soft)]`}
     >
       {initials}
     </div>
@@ -175,18 +186,17 @@ async function resizeImage(file, size = 320) {
 
 /* ---------- styling maps (full class names so Tailwind keeps them) ---------- */
 const TONES = {
-  green: 'bg-[color:var(--brand-soft)] text-[color:var(--brand)]',
+  brand: 'bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)]',
+  navy: 'bg-slate-100 text-[color:var(--navy)]',
   emerald: 'bg-emerald-50 text-emerald-600',
-  blue: 'bg-blue-50 text-blue-600',
-  slate: 'bg-slate-100 text-slate-600',
-  indigo: 'bg-indigo-50 text-indigo-600',
+  blue: 'bg-sky-50 text-sky-600',
   amber: 'bg-amber-50 text-amber-600',
   red: 'bg-red-50 text-red-600',
 }
 
 const ROLE_STYLES = {
-  owner: 'bg-amber-100 text-amber-800 ring-amber-200',
-  support: 'bg-blue-100 text-blue-800 ring-blue-200',
+  owner: 'bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)] ring-orange-200',
+  support: 'bg-sky-100 text-sky-800 ring-sky-200',
   viewer: 'bg-slate-100 text-slate-700 ring-slate-200',
   admin: 'bg-slate-100 text-slate-700 ring-slate-200',
 }
@@ -196,7 +206,7 @@ const GROUPS = [
     title: 'Drivers',
     cols: 'grid-cols-2',
     items: [
-      { key: 'totalDrivers', label: 'Total drivers', icon: ICONS.user, tone: 'green' },
+      { key: 'totalDrivers', label: 'Total drivers', icon: ICONS.user, tone: 'brand' },
       { key: 'activeDrivers', label: 'Online now', icon: ICONS.check, tone: 'emerald' },
     ],
   },
@@ -205,15 +215,15 @@ const GROUPS = [
     cols: 'grid-cols-3',
     items: [
       { key: 'activeTrips', label: 'Active', icon: ICONS.bolt, tone: 'blue' },
-      { key: 'completedTrips', label: 'Completed', icon: ICONS.check, tone: 'green' },
-      { key: 'cancelledTrips', label: 'Cancelled', icon: ICONS.x, tone: 'slate' },
+      { key: 'completedTrips', label: 'Completed', icon: ICONS.check, tone: 'emerald' },
+      { key: 'cancelledTrips', label: 'Cancelled', icon: ICONS.x, tone: 'navy' },
     ],
   },
   {
     title: 'Community',
     cols: 'grid-cols-3',
     items: [
-      { key: 'totalPassengers', label: 'Passengers', icon: ICONS.users, tone: 'indigo' },
+      { key: 'totalPassengers', label: 'Passengers', icon: ICONS.users, tone: 'navy' },
       { key: 'reviews', label: 'Reviews', icon: ICONS.star, tone: 'amber' },
       { key: 'complaints', label: 'Open complaints', icon: ICONS.warn, tone: 'red' },
     ],
@@ -374,8 +384,8 @@ export default function AdminDashboard() {
         style={cssVars}
         className="min-h-screen flex flex-col items-center justify-center bg-[color:var(--page)] gap-3"
       >
-        <div className="w-9 h-9 rounded-full border-4 border-gray-200 border-t-[color:var(--brand)] animate-spin" />
-        <p className="text-sm text-gray-500">Loading dashboard...</p>
+        <div className="w-10 h-10 rounded-full border-4 border-slate-200 border-t-[color:var(--brand)] animate-spin" />
+        <p className="text-sm text-[color:var(--muted)]">Loading dashboard...</p>
       </div>
     )
   }
@@ -389,7 +399,7 @@ export default function AdminDashboard() {
       label: 'Manage Drivers',
       sub: 'Approve, edit and suspend drivers',
       icon: ICONS.user,
-      tone: 'green',
+      tone: 'brand',
       href: '/drivers',
     },
     {
@@ -403,7 +413,7 @@ export default function AdminDashboard() {
       label: 'Subscriptions',
       sub: 'Driver plans and payments',
       icon: ICONS.card,
-      tone: 'indigo',
+      tone: 'navy',
       href: '/subscriptions',
     },
     perms.fares && {
@@ -415,34 +425,36 @@ export default function AdminDashboard() {
     },
   ].filter(Boolean)
 
+  const sectionTitle =
+    'text-xs font-semibold uppercase tracking-wider text-[color:var(--muted)] mb-2 px-1'
+
   return (
-    <div style={cssVars} className="min-h-screen w-full bg-[color:var(--page)] pb-10">
-      {/* Top bar */}
-      <header className="sticky top-0 z-30 w-full bg-[color:var(--card)]/90 backdrop-blur border-b border-gray-200">
-        <div className="w-full px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between">
+    <div style={cssVars} className="min-h-screen w-full bg-[color:var(--page)] pb-12">
+      {/* Navy header */}
+      <header className="w-full bg-[color:var(--navy)] text-white rounded-b-[2rem] px-5 sm:px-8 lg:px-12 pt-6 pb-20">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-[color:var(--brand-soft)] text-[color:var(--brand)] flex items-center justify-center overflow-hidden">
+            <div className="w-11 h-11 rounded-2xl bg-white/10 text-[color:var(--brand)] flex items-center justify-center overflow-hidden">
               <TricycleLogo className="w-9 h-9" />
             </div>
-            <div className="leading-tight">
-              <p className="text-sm font-bold text-gray-900">TRICYCALL.SF</p>
-              <p className="text-[11px] text-gray-500">Admin Dashboard</p>
-            </div>
+            <p className="text-sm font-semibold tracking-wide text-slate-300">TRICYCALL.SF</p>
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-1.5 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg px-3 py-1.5 hover:bg-gray-100 transition"
+            className="flex items-center gap-1.5 text-sm font-semibold text-white bg-white/10 rounded-full px-4 py-2 hover:bg-white/20 transition"
           >
             <Icon d={ICONS.logout} className="w-4 h-4" />
             Log out
           </button>
         </div>
+        <h1 className="mt-8 text-3xl sm:text-4xl font-extrabold tracking-tight">Admin Dashboard</h1>
+        <p className="mt-2 text-slate-300">Manage drivers, trips and your team.</p>
       </header>
 
-      <main className="w-full px-4 sm:px-6 lg:px-10 pt-5 space-y-6">
+      <main className="w-full px-4 sm:px-8 lg:px-12 -mt-12 space-y-7">
         {/* Profile card */}
-        <div className="bg-[color:var(--card)] border border-gray-200 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-3">
+        <div className="bg-[color:var(--card)] border border-[color:var(--line)] rounded-3xl p-5 shadow-sm">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
@@ -450,12 +462,12 @@ export default function AdminDashboard() {
               aria-label="Change profile photo"
             >
               <Avatar url={me.avatar} initials={initials} size="w-16 h-16" text="text-lg" />
-              <span className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-white border border-gray-300 text-gray-600 flex items-center justify-center shadow">
+              <span className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full bg-[color:var(--navy)] text-white flex items-center justify-center shadow">
                 <Icon d={ICONS.camera} className="w-3.5 h-3.5" />
               </span>
               {uploading && (
                 <span className="absolute inset-0 rounded-full bg-white/70 flex items-center justify-center">
-                  <span className="w-5 h-5 rounded-full border-2 border-gray-200 border-t-[color:var(--brand)] animate-spin" />
+                  <span className="w-5 h-5 rounded-full border-2 border-slate-200 border-t-[color:var(--brand)] animate-spin" />
                 </span>
               )}
             </button>
@@ -467,27 +479,25 @@ export default function AdminDashboard() {
               onChange={handlePhoto}
             />
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-gray-500">Signed in as</p>
-              <p className="text-sm font-semibold text-gray-900 truncate">{me.email}</p>
+              <p className="text-xs text-[color:var(--muted)]">Signed in as</p>
+              <p className="text-base font-bold text-[color:var(--navy)] truncate">{me.email}</p>
               <span
-                className={`inline-block mt-1.5 text-[11px] font-bold uppercase tracking-wide px-2.5 py-0.5 rounded-full ring-1 ring-inset ${roleStyle}`}
+                className={`inline-block mt-1.5 text-[11px] font-bold uppercase tracking-wide px-3 py-0.5 rounded-full ring-1 ring-inset ${roleStyle}`}
               >
                 {me.role}
               </span>
             </div>
           </div>
-          <p className="text-[11px] text-gray-400 mt-3">
+          <p className="text-xs text-[color:var(--muted)] mt-3">
             {photoMsg ? <span className="text-red-600">{photoMsg}</span> : 'Tap your photo to change it.'}
           </p>
         </div>
 
         {/* Stat groups */}
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-7 md:grid-cols-2 xl:grid-cols-3">
           {GROUPS.map((group) => (
             <section key={group.title}>
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2 px-1">
-                {group.title}
-              </h2>
+              <h2 className={sectionTitle}>{group.title}</h2>
               <div className={`grid ${group.cols} gap-3`}>
                 {group.items.map((item) => {
                   const value = stats[item.key]
@@ -496,19 +506,23 @@ export default function AdminDashboard() {
                     <button
                       key={item.key}
                       onClick={() => openCard(item.key)}
-                      className={`text-left bg-[color:var(--card)] border rounded-2xl p-3.5 shadow-sm hover:shadow-md active:scale-[0.98] transition ${
-                        alert ? 'border-red-300' : 'border-gray-200'
+                      className={`text-left bg-[color:var(--card)] border rounded-3xl p-4 shadow-sm hover:shadow-md active:scale-[0.98] transition ${
+                        alert ? 'border-red-300' : 'border-[color:var(--line)]'
                       }`}
                     >
                       <div
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${TONES[item.tone]}`}
+                        className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-3 ${TONES[item.tone]}`}
                       >
                         <Icon d={item.icon} className="w-5 h-5" />
                       </div>
-                      <p className={`text-2xl font-bold leading-none ${alert ? 'text-red-600' : 'text-gray-900'}`}>
+                      <p
+                        className={`text-3xl font-extrabold leading-none ${
+                          alert ? 'text-red-600' : 'text-[color:var(--navy)]'
+                        }`}
+                      >
                         {value ?? '—'}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1.5">{item.label}</p>
+                      <p className="text-xs text-[color:var(--muted)] mt-2">{item.label}</p>
                     </button>
                   )
                 })}
@@ -519,26 +533,24 @@ export default function AdminDashboard() {
 
         {/* Quick actions */}
         <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2 px-1">
-            Manage
-          </h2>
-          <div className="bg-[color:var(--card)] border border-gray-200 rounded-2xl shadow-sm divide-y divide-gray-100 overflow-hidden">
+          <h2 className={sectionTitle}>Manage</h2>
+          <div className="bg-[color:var(--card)] border border-[color:var(--line)] rounded-3xl shadow-sm divide-y divide-slate-100 overflow-hidden">
             {actions.map((a) => (
               <button
                 key={a.href}
                 onClick={() => router.push(a.href)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50 active:bg-gray-100 transition"
+                className="w-full flex items-center gap-3 px-4 py-4 text-left hover:bg-slate-50 active:bg-slate-100 transition"
               >
                 <div
-                  className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center ${TONES[a.tone]}`}
+                  className={`w-11 h-11 shrink-0 rounded-2xl flex items-center justify-center ${TONES[a.tone]}`}
                 >
                   <Icon d={a.icon} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-gray-900">{a.label}</p>
-                  <p className="text-xs text-gray-500 truncate">{a.sub}</p>
+                  <p className="text-sm font-bold text-[color:var(--navy)]">{a.label}</p>
+                  <p className="text-xs text-[color:var(--muted)] truncate">{a.sub}</p>
                 </div>
-                <Icon d={ICONS.chevron} className="w-4 h-4 text-gray-400" />
+                <Icon d={ICONS.chevron} className="w-4 h-4 text-slate-400" />
               </button>
             ))}
           </div>
@@ -550,29 +562,23 @@ export default function AdminDashboard() {
 
       {/* Details window: full screen */}
       {view && (
-        <div className="fixed inset-0 bg-[color:var(--card)] flex flex-col" style={{ zIndex: 9999 }}>
-          <div className="flex items-center gap-2 px-4 sm:px-6 lg:px-10 h-14 shrink-0 border-b border-gray-200 bg-[color:var(--card)]">
-            {stack.length > 1 ? (
-              <button
-                onClick={back}
-                className="text-[color:var(--brand-dark)] font-semibold text-sm px-2.5 py-1.5 rounded-lg hover:bg-[color:var(--brand-soft)]"
-                aria-label="Back"
-              >
-                &larr; Back
-              </button>
-            ) : null}
-            <h2 className="font-bold text-gray-900 flex-1 truncate">{viewTitle(view)}</h2>
+        <div className="fixed inset-0 bg-[color:var(--page)] flex flex-col" style={{ zIndex: 9999 }}>
+          <div className="shrink-0 bg-[color:var(--navy)] text-white rounded-b-[2rem] px-5 sm:px-8 lg:px-12 pt-6 pb-6">
             <button
-              onClick={close}
-              className="w-9 h-9 rounded-full bg-gray-100 text-gray-600 text-2xl leading-none flex items-center justify-center hover:bg-gray-200"
-              aria-label="Close"
+              onClick={stack.length > 1 ? back : close}
+              className="flex items-center gap-1 text-slate-300 font-medium hover:text-white"
+              aria-label="Back"
             >
-              &times;
+              <Icon d={ICONS.back} className="w-5 h-5" />
+              {stack.length > 1 ? 'Back' : 'Close'}
             </button>
+            <h2 className="mt-4 text-2xl sm:text-3xl font-extrabold tracking-tight truncate">
+              {viewTitle(view)}
+            </h2>
           </div>
 
-          <div className="overflow-y-auto p-4 sm:px-6 lg:px-10 flex-1 bg-[color:var(--page)]">
-            <div className="w-full">
+          <div className="overflow-y-auto flex-1 px-4 sm:px-8 lg:px-12 py-5">
+            <div className="w-full bg-[color:var(--card)] border border-[color:var(--line)] rounded-3xl p-4 shadow-sm">
               {view.type === 'list' && view.key === 'reviews' && (
                 <ReviewsPanel key="reviews" onOpen={open} />
               )}
