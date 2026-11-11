@@ -41,6 +41,10 @@ export async function POST(req: NextRequest) {
   if (!owner) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { email, password, role } = await req.json();
+  if (typeof email !== "string" || !email.includes("@"))
+    return NextResponse.json({ error: "Enter a valid email" }, { status: 400 });
+  if (typeof password !== "string" || password.length < 8)
+    return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
   if (!DEFAULTS[role])
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
 
@@ -98,7 +102,18 @@ export async function PATCH(req: NextRequest) {
     update.permissions = clean;
   }
 
-  await admin.from("admin_roles").update(update).eq("user_id", user_id);
+  if (Object.keys(update).length === 0)
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+
+  const { data: updated, error } = await admin
+    .from("admin_roles")
+    .update(update)
+    .eq("user_id", user_id)
+    .select("user_id");
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  if (!updated || updated.length === 0)
+    return NextResponse.json({ error: "Admin not found" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }
 
@@ -110,6 +125,23 @@ export async function DELETE(req: NextRequest) {
   if (user_id === owner.id)
     return NextResponse.json({ error: "Can't remove yourself" }, { status: 400 });
 
-  await admin.auth.admin.deleteUser(user_id);
+  if (typeof user_id !== "string" || !user_id)
+    return NextResponse.json({ error: "Invalid user" }, { status: 400 });
+
+  // Only accounts that are actually admins can be removed here, so this
+  // endpoint can never delete a driver's or passenger's account.
+  const { data: target } = await admin
+    .from("admin_roles")
+    .select("user_id")
+    .eq("user_id", user_id)
+    .maybeSingle();
+  if (!target)
+    return NextResponse.json({ error: "Admin not found" }, { status: 404 });
+
+  await admin.from("admin_roles").delete().eq("user_id", user_id);
+  await admin.from("profiles").delete().eq("id", user_id);
+  const { error } = await admin.auth.admin.deleteUser(user_id);
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ ok: true });
 }
