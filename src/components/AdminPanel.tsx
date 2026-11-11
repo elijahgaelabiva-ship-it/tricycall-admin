@@ -63,7 +63,11 @@ export default function AdminPanel() {
   async function toggle(a: Admin, key: string) {
     const next = { ...a.permissions, [key]: !a.permissions?.[key] };
     setAdmins(prev => prev.map(x => x.user_id === a.user_id ? { ...x, permissions: next } : x));
-    await call("PATCH", { user_id: a.user_id, permissions: next });
+    const r = await call("PATCH", { user_id: a.user_id, permissions: next });
+    if (r.error) {
+      setMsg(r.error);
+      load(token); // put the toggle back to what is really saved
+    }
   }
 
   if (!isOwner) return null;
