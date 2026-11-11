@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useAdminGuard } from '@/lib/useAdminGuard'
 
 export default function FareSettingsPage() {
   const [fareId, setFareId] = useState(null)
@@ -12,13 +13,18 @@ export default function FareSettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const router = useRouter()
 
+  const allowed = useAdminGuard('fares')
+
   useEffect(() => {
+    if (!allowed) return
     const loadFares = async () => {
       const { data } = await supabase
         .from('fare_settings')
         .select('*')
+        .order('updated_at', { ascending: false, nullsFirst: false })
         .limit(1)
         .single()
 
@@ -31,23 +37,45 @@ export default function FareSettingsPage() {
       setLoading(false)
     }
     loadFares()
-  }, [])
+  }, [allowed])
 
   const saveFares = async () => {
-    setSaving(true)
     setSaved(false)
+    setSaveError('')
+
+    const base = Number(baseFare)
+    const perKm = Number(perKmRate)
+    const waiting = Number(waitingFee)
+    if (
+      [base, perKm, waiting].some((n) => !Number.isFinite(n) || n < 0) ||
+      baseFare === '' ||
+      perKmRate === ''
+    ) {
+      setSaveError('Enter valid amounts (0 or more) for the base fare and per-km rate.')
+      return
+    }
+    if (base === 0 && perKm === 0) {
+      setSaveError('Base fare and per-km rate cannot both be zero.')
+      return
+    }
+    if (!fareId) {
+      setSaveError('No fare settings row was found to update.')
+      return
+    }
+    setSaving(true)
 
     const { error } = await supabase
       .from('fare_settings')
       .update({
-        base_fare: baseFare,
-        per_km_rate: perKmRate,
-        waiting_fee_per_min: waitingFee,
+        base_fare: base,
+        per_km_rate: perKm,
+        waiting_fee_per_min: waiting,
         updated_at: new Date().toISOString(),
       })
       .eq('id', fareId)
 
-    if (!error) setSaved(true)
+    if (error) setSaveError('Could not save: ' + error.message)
+    else setSaved(true)
     setSaving(false)
   }
 
@@ -107,6 +135,10 @@ export default function FareSettingsPage() {
           <p className="text-green-600 text-sm text-center">
             Fare settings updated!
           </p>
+        )}
+
+        {saveError && (
+          <p className="text-red-600 text-sm text-center">{saveError}</p>
         )}
 
         <button
