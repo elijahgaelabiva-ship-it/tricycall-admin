@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useAdminGuard } from '@/lib/useAdminGuard'
 import Avatar from '@/components/Avatar'
 import {
   fetchProfiles,
@@ -86,10 +87,12 @@ export default function SubscriptionsPage() {
     setLoading(false)
   }
 
+  const allowed = useAdminGuard('subscriptions')
+
   useEffect(() => {
-    load()
+    if (allowed) load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [allowed])
 
   const saveSettings = async () => {
     setSaving(true)
