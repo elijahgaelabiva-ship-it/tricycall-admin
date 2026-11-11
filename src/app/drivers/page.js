@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useAdminGuard } from '@/lib/useAdminGuard'
 
 export default function ManageDriversPage() {
   const [drivers, setDrivers] = useState([])
@@ -10,9 +11,11 @@ export default function ManageDriversPage() {
   const [updating, setUpdating] = useState(null)
   const router = useRouter()
 
+  const allowed = useAdminGuard('drivers')
+
   useEffect(() => {
-    loadDrivers()
-  }, [])
+    if (allowed) loadDrivers()
+  }, [allowed])
 
   const loadDrivers = async () => {
     const { data: driversData } = await supabase
