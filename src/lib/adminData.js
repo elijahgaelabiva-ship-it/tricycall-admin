@@ -78,6 +78,14 @@ export function cancellationInfo(trip) {
         }
   }
 
+  if (trip.cancelled_by === 'admin') {
+    return {
+      label: 'Cancelled by admin',
+      detail: 'An administrator cancelled this trip.',
+      tone: 'text-gray-700 bg-gray-100',
+    }
+  }
+
   if (trip.cancelled_by === 'system') {
     return {
       label: 'Auto-cancelled',
