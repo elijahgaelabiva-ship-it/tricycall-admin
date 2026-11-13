@@ -39,6 +39,9 @@ function PersonCard({ title, person, plate, onClick, emptyText }) {
 export default function TripDetails({ id, onOpen }) {
   const [info, setInfo] = useState(null)
   const [error, setError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
+  const [acting, setActing] = useState(false)
+  const [actionError, setActionError] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -81,7 +84,7 @@ export default function TripDetails({ id, onOpen }) {
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [id, reloadKey])
 
   if (error) return <p className="text-red-600 text-sm">{error}</p>
   if (!info) return <p className="text-gray-500 text-sm">Loading...</p>
@@ -101,6 +104,21 @@ export default function TripDetails({ id, onOpen }) {
     ['Cancelled', trip.cancelled_at],
   ].filter(([, value]) => value)
 
+  const canCancel = ['requested', 'accepted', 'arrived', 'ongoing'].includes(trip.status)
+
+  const cancelTrip = async () => {
+    if (!window.confirm('Cancel this trip? The passenger and driver will see it as cancelled.')) return
+    setActing(true)
+    setActionError('')
+    const { error: rpcError } = await supabase.rpc('admin_cancel_trip', { p_trip_id: id })
+    setActing(false)
+    if (rpcError) {
+      setActionError(rpcError.message)
+      return
+    }
+    setReloadKey((k) => k + 1)
+  }
+
   const hasPickup = trip.pickup_lat && trip.pickup_lng
   const hasDropoff = trip.dropoff_lat && trip.dropoff_lng
 
@@ -112,6 +130,19 @@ export default function TripDetails({ id, onOpen }) {
         </span>
         <p className="text-xl font-bold text-green-700">{money(trip.fare)}</p>
       </div>
+
+      {canCancel && (
+        <div>
+          <button
+            onClick={cancelTrip}
+            disabled={acting}
+            className="w-full rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+          >
+            {acting ? 'Cancelling...' : 'Cancel this trip'}
+          </button>
+          {actionError && <p className="mt-2 text-xs text-red-600">{actionError}</p>}
+        </div>
+      )}
 
       {cancelled && (
         <div className={`rounded-xl p-3 ${cancelled.tone}`}>
