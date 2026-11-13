@@ -237,7 +237,7 @@ export default function AdminDashboard() {
   const [perms, setPerms] = useState({})
   const [me, setMe] = useState({ email: '', role: '', avatar: '' })
   const [uploading, setUploading] = useState(false)
-  const [pending, setPending] = useState({ total: 0, paid: 0, unpaid: 0 })
+  const [pending, setPending] = useState({ total: 0, paid: 0, unpaid: 0, photos: 0 })
   const [photoMsg, setPhotoMsg] = useState('')
   // Navigation inside the details window: list -> driver / passenger / trip ...
   const [stack, setStack] = useState([])
@@ -368,10 +368,22 @@ export default function AdminDashboard() {
     let cancelled = false
 
     const loadPending = async () => {
-      const { data } = await supabase.from('drivers').select('id, paid_until').eq('is_approved', false)
-      if (cancelled || !data) return
+      const [driversRes, photosRes] = await Promise.all([
+        supabase.from('drivers').select('id, paid_until').eq('is_approved', false),
+        supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .not('pending_avatar_at', 'is', null),
+      ])
+      if (cancelled || !driversRes.data) return
+      const data = driversRes.data
       const paid = data.filter((d) => hasPaid(d.paid_until)).length
-      setPending({ total: data.length, paid, unpaid: data.length - paid })
+      setPending({
+        total: data.length,
+        paid,
+        unpaid: data.length - paid,
+        photos: photosRes.count || 0,
+      })
     }
 
     const onVisible = () => {
@@ -430,7 +442,7 @@ export default function AdminDashboard() {
       icon: ICONS.user,
       tone: 'brand',
       href: '/drivers',
-      badge: pending.total,
+      badge: pending.total + pending.photos,
     },
     {
       label: 'View All Trips',
@@ -524,21 +536,38 @@ export default function AdminDashboard() {
         </div>
 
         {/* Pending driver approvals */}
-        {perms.drivers && pending.total > 0 && (
+        {perms.drivers && pending.total + pending.photos > 0 && (
           <button
-            onClick={() => router.push('/drivers?filter=pending')}
+            onClick={() =>
+              router.push(pending.total > 0 ? '/drivers?filter=pending' : '/drivers?filter=photos')
+            }
             className="w-full flex items-center gap-3 text-left rounded-3xl border border-amber-300 bg-amber-50 px-4 py-4 shadow-sm active:scale-[0.99] transition"
           >
             <div className="w-11 h-11 shrink-0 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center">
               <Icon d={ICONS.warn} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-[color:var(--navy)]">
-                {pending.total} {pending.total === 1 ? 'driver' : 'drivers'} waiting for approval
-              </p>
-              <p className="text-xs text-amber-700">
-                {pending.paid} paid and ready · {pending.unpaid} awaiting payment
-              </p>
+              {pending.total > 0 && (
+                <>
+                  <p className="text-sm font-bold text-[color:var(--navy)]">
+                    {pending.total} {pending.total === 1 ? 'driver' : 'drivers'} waiting for approval
+                  </p>
+                  <p className="text-xs text-amber-700">
+                    {pending.paid} paid and ready · {pending.unpaid} awaiting payment
+                  </p>
+                </>
+              )}
+              {pending.photos > 0 && (
+                <p
+                  className={
+                    pending.total > 0
+                      ? 'text-xs text-amber-700'
+                      : 'text-sm font-bold text-[color:var(--navy)]'
+                  }
+                >
+                  {pending.photos} new {pending.photos === 1 ? 'photo' : 'photos'} to review
+                </p>
+              )}
             </div>
             <Icon d={ICONS.chevron} className="w-4 h-4 text-amber-600" />
           </button>

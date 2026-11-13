@@ -11,6 +11,7 @@ const FILTERS = [
   ['all', 'All'],
   ['pending', 'Pending'],
   ['approved', 'Approved'],
+  ['photos', 'New photos'],
 ]
 
 export default function ManageDriversPage() {
@@ -19,14 +20,14 @@ export default function ManageDriversPage() {
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(null)
   const [message, setMessage] = useState('')
-  // Opens on the Pending tab when coming from the dashboard notification
-  const [filter, setFilter] = useState(() =>
-    typeof window !== 'undefined' &&
-    new URLSearchParams(window.location.search).get('filter') === 'pending'
-      ? 'pending'
-      : 'all'
-  )
+  // Opens on the right tab when coming from the dashboard notification
+  const [filter, setFilter] = useState(() => {
+    if (typeof window === 'undefined') return 'all'
+    const f = new URLSearchParams(window.location.search).get('filter')
+    return f === 'pending' || f === 'photos' ? f : 'all'
+  })
   const [payDriver, setPayDriver] = useState(null)
+  const [photoBusy, setPhotoBusy] = useState(null)
   const router = useRouter()
 
   const allowed = useAdminGuard('drivers')
@@ -39,7 +40,7 @@ export default function ManageDriversPage() {
     const [driversRes, vehiclesRes, settingsRes] = await Promise.all([
       supabase
         .from('drivers')
-        .select('*, profiles(full_name, phone, avatar_url)')
+        .select('*, profiles(full_name, phone, avatar_url, pending_avatar_at)')
         .order('created_at', { ascending: false }),
       supabase.from('vehicles').select('*'),
       supabase.from('subscription_settings').select('*').eq('id', 1).maybeSingle(),
@@ -91,6 +92,32 @@ export default function ManageDriversPage() {
     setUpdating(null)
   }
 
+  const reviewPhoto = async (driverId, action) => {
+    const ok = window.confirm(
+      action === 'approve'
+        ? 'Replace the driver\'s photo with the new one?'
+        : 'Reject the new photo? The driver keeps the current photo.'
+    )
+    if (!ok) return
+    setPhotoBusy(driverId)
+    setMessage('')
+    const { data: sess } = await supabase.auth.getSession()
+    const res = await fetch('/api/driver-photo', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${sess.session?.access_token}`,
+      },
+      body: JSON.stringify({ driver_id: driverId, action }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      setMessage(body.error || 'Could not update the photo.')
+    }
+    setPhotoBusy(null)
+    loadDrivers()
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -100,12 +127,15 @@ export default function ManageDriversPage() {
   }
 
   const pendingCount = drivers.filter((d) => !d.is_approved).length
+  const photoCount = drivers.filter((d) => d.profiles?.pending_avatar_at).length
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 
   // Pending drivers first, then newest
   const visible = drivers
     .filter((d) => {
       if (filter === 'pending') return !d.is_approved
       if (filter === 'approved') return d.is_approved
+      if (filter === 'photos') return Boolean(d.profiles?.pending_avatar_at)
       return true
     })
     .sort((a, b) => Number(a.is_approved) - Number(b.is_approved))
@@ -133,6 +163,7 @@ export default function ManageDriversPage() {
             >
               {label}
               {key === 'pending' && pendingCount > 0 ? ` (${pendingCount})` : ''}
+              {key === 'photos' && photoCount > 0 ? ` (${photoCount})` : ''}
             </button>
           ))}
         </div>
@@ -236,6 +267,54 @@ export default function ManageDriversPage() {
                     <p className="mt-2 text-xs text-orange-600">
                       On hold until payment is completed.
                     </p>
+                  )}
+
+                  {driver.profiles?.pending_avatar_at && (
+                    <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3">
+                      <p className="text-sm font-semibold text-gray-800">
+                        New photo waiting for approval
+                      </p>
+                      <div className="mt-2 flex items-center gap-4">
+                        <div className="text-center">
+                          {driver.profiles?.avatar_url ? (
+                            <img
+                              src={driver.profiles.avatar_url}
+                              alt="Current photo"
+                              className="w-20 h-20 rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div className="w-20 h-20 rounded-lg bg-gray-100" />
+                          )}
+                          <p className="text-xs text-gray-500 mt-1">Current</p>
+                        </div>
+                        <div className="text-center">
+                          <img
+                            src={`${supabaseUrl}/storage/v1/object/public/avatars/${driver.id}/pending.jpg?t=${encodeURIComponent(
+                              driver.profiles.pending_avatar_at
+                            )}`}
+                            alt="New photo"
+                            className="w-20 h-20 rounded-lg object-cover"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">New</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          onClick={() => reviewPhoto(driver.id, 'approve')}
+                          disabled={photoBusy === driver.id}
+                          className="flex-1 text-sm font-semibold py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                        >
+                          Approve photo
+                        </button>
+                        <button
+                          onClick={() => reviewPhoto(driver.id, 'reject')}
+                          disabled={photoBusy === driver.id}
+                          className="flex-1 text-sm font-semibold py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:opacity-50"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
