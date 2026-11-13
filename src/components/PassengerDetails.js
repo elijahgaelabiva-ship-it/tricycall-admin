@@ -7,9 +7,14 @@ import DetailRow from '@/components/DetailRow'
 import LazyTripMap from '@/components/LazyTripMap'
 import { fetchProfiles, formatDate, formatDateTime, money, STATUS_STYLES } from '@/lib/adminData'
 
+const STRIKE_LIMIT = 3 // same limit the passenger app uses to block booking
+
 export default function PassengerDetails({ id, onOpen }) {
   const [info, setInfo] = useState(null)
   const [error, setError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
+  const [acting, setActing] = useState(false)
+  const [actionError, setActionError] = useState('')
   const [mapTripId, setMapTripId] = useState(null)
 
   useEffect(() => {
@@ -53,13 +58,29 @@ export default function PassengerDetails({ id, onOpen }) {
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [id, reloadKey])
 
   if (error) return <p className="text-red-600 text-sm">{error}</p>
   if (!info) return <p className="text-gray-500 text-sm">Loading...</p>
 
   const { profile, trips, driverProfiles } = info
   if (!profile) return <p className="text-gray-500 text-sm">Passenger not found.</p>
+  const strikes = Number(profile.strike_count || 0)
+
+  const resetStrikes = async () => {
+    if (!window.confirm("Reset this passenger's strikes to 0? They will be able to book again.")) return
+    setActing(true)
+    setActionError('')
+    const { error: rpcError } = await supabase.rpc('admin_reset_passenger_strikes', {
+      p_user_id: id,
+    })
+    setActing(false)
+    if (rpcError) {
+      setActionError(rpcError.message)
+      return
+    }
+    setReloadKey((k) => k + 1)
+  }
 
   return (
     <div>
@@ -71,7 +92,28 @@ export default function PassengerDetails({ id, onOpen }) {
       <div className="mt-5 rounded-xl border border-gray-200 px-4">
         <DetailRow label="Phone">{profile.phone || '—'}</DetailRow>
         <DetailRow label="Joined">{formatDate(profile.created_at)}</DetailRow>
+        <DetailRow label="Strikes">
+          {strikes}
+          {strikes >= STRIKE_LIMIT && (
+            <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-600">
+              Blocked from booking
+            </span>
+          )}
+        </DetailRow>
       </div>
+
+      {strikes > 0 && (
+        <div className="mt-3">
+          <button
+            onClick={resetStrikes}
+            disabled={acting}
+            className="w-full rounded-xl border border-gray-300 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            {acting ? 'Working...' : 'Reset strikes to 0'}
+          </button>
+          {actionError && <p className="mt-2 text-xs text-red-600">{actionError}</p>}
+        </div>
+      )}
 
       <div className="mt-3 grid grid-cols-3 gap-2 text-center">
         <div className="rounded-xl border border-gray-200 p-3">
