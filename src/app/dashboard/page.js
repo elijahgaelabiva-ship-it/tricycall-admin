@@ -10,6 +10,7 @@ import TripDetails from '@/components/TripDetails'
 import ReviewsPanel from '@/components/ReviewsPanel'
 import ComplaintsPanel from '@/components/ComplaintsPanel'
 import AdminPanel from '@/components/AdminPanel'
+import { hasPaid } from '@/lib/adminData'
 
 /* =====================================================
    COLOR PALETTE (matches the passenger app)
@@ -236,6 +237,7 @@ export default function AdminDashboard() {
   const [perms, setPerms] = useState({})
   const [me, setMe] = useState({ email: '', role: '', avatar: '' })
   const [uploading, setUploading] = useState(false)
+  const [pending, setPending] = useState({ total: 0, paid: 0, unpaid: 0 })
   const [photoMsg, setPhotoMsg] = useState('')
   // Navigation inside the details window: list -> driver / passenger / trip ...
   const [stack, setStack] = useState([])
@@ -359,6 +361,33 @@ export default function AdminDashboard() {
     loadStats()
   }, [router])
 
+  // Notify admins who can manage drivers when registrations are waiting.
+  // Re-checks every 30 seconds and whenever the tab is shown again.
+  useEffect(() => {
+    if (!perms.drivers) return
+    let cancelled = false
+
+    const loadPending = async () => {
+      const { data } = await supabase.from('drivers').select('id, paid_until').eq('is_approved', false)
+      if (cancelled || !data) return
+      const paid = data.filter((d) => hasPaid(d.paid_until)).length
+      setPending({ total: data.length, paid, unpaid: data.length - paid })
+    }
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') loadPending()
+    }
+
+    loadPending()
+    const timer = setInterval(loadPending, 30000)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [perms.drivers])
+
   const refreshComplaintCount = async () => {
     const { count } = await supabase
       .from('trip_reports')
@@ -401,6 +430,7 @@ export default function AdminDashboard() {
       icon: ICONS.user,
       tone: 'brand',
       href: '/drivers',
+      badge: pending.total,
     },
     {
       label: 'View All Trips',
@@ -493,6 +523,27 @@ export default function AdminDashboard() {
           </p>
         </div>
 
+        {/* Pending driver approvals */}
+        {perms.drivers && pending.total > 0 && (
+          <button
+            onClick={() => router.push('/drivers?filter=pending')}
+            className="w-full flex items-center gap-3 text-left rounded-3xl border border-amber-300 bg-amber-50 px-4 py-4 shadow-sm active:scale-[0.99] transition"
+          >
+            <div className="w-11 h-11 shrink-0 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center">
+              <Icon d={ICONS.warn} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-[color:var(--navy)]">
+                {pending.total} {pending.total === 1 ? 'driver' : 'drivers'} waiting for approval
+              </p>
+              <p className="text-xs text-amber-700">
+                {pending.paid} paid and ready · {pending.unpaid} awaiting payment
+              </p>
+            </div>
+            <Icon d={ICONS.chevron} className="w-4 h-4 text-amber-600" />
+          </button>
+        )}
+
         {/* Stat groups */}
         <div className="grid gap-7 md:grid-cols-2 xl:grid-cols-3">
           {GROUPS.map((group) => (
@@ -550,6 +601,11 @@ export default function AdminDashboard() {
                   <p className="text-sm font-bold text-[color:var(--navy)]">{a.label}</p>
                   <p className="text-xs text-[color:var(--muted)] truncate">{a.sub}</p>
                 </div>
+                {a.badge > 0 && (
+                  <span className="min-w-[1.5rem] h-6 px-2 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                    {a.badge}
+                  </span>
+                )}
                 <Icon d={ICONS.chevron} className="w-4 h-4 text-slate-400" />
               </button>
             ))}

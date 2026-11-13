@@ -135,3 +135,10 @@ export function subscriptionStatus(paidUntil, settings) {
 
   return { key: 'expired', label: 'Expired', className: 'bg-red-100 text-red-600', daysLeft }
 }
+
+// True when the driver has a paid period that has not ended yet.
+// Used to decide whether a pending driver may be approved.
+export function hasPaid(paidUntil) {
+  if (!paidUntil) return false
+  return Date.parse(paidUntil) >= Date.parse(manilaToday())
+}
