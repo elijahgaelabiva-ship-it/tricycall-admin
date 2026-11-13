@@ -5,11 +5,14 @@ import { supabase } from '@/lib/supabase'
 import Avatar from '@/components/Avatar'
 import Stars from '@/components/Stars'
 import DetailRow from '@/components/DetailRow'
-import { formatDate, money, subscriptionStatus } from '@/lib/adminData'
+import { formatDate, formatDateTime, money, subscriptionStatus } from '@/lib/adminData'
 
 export default function DriverDetails({ id, onOpen }) {
   const [info, setInfo] = useState(null)
   const [error, setError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
+  const [acting, setActing] = useState(false)
+  const [actionError, setActionError] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -60,13 +63,28 @@ export default function DriverDetails({ id, onOpen }) {
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [id, reloadKey])
 
   if (error) return <p className="text-red-600 text-sm">{error}</p>
   if (!info) return <p className="text-gray-500 text-sm">Loading...</p>
 
   const { driver, profile, vehicle } = info
   if (!driver) return <p className="text-gray-500 text-sm">Driver not found.</p>
+
+  const liftSuspension = async () => {
+    if (!window.confirm("Lift this driver's suspension and clear their violations?")) return
+    setActing(true)
+    setActionError('')
+    const { error: rpcError } = await supabase.rpc('admin_clear_driver_suspension', {
+      p_driver_id: id,
+    })
+    setActing(false)
+    if (rpcError) {
+      setActionError(rpcError.message)
+      return
+    }
+    setReloadKey((k) => k + 1)
+  }
 
   return (
     <div>
@@ -153,6 +171,23 @@ export default function DriverDetails({ id, onOpen }) {
         </div>
       </div>
 
+      {driver.is_suspended && (
+        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
+          <p className="text-sm font-semibold text-red-700">This driver is suspended</p>
+          <p className="mt-0.5 text-xs text-red-600">
+            {driver.suspended_at ? `Since ${formatDateTime(driver.suspended_at)}. ` : ''}
+            {driver.disconnect_violations ? `Violations recorded: ${driver.disconnect_violations}.` : ''}
+          </p>
+          <button
+            onClick={liftSuspension}
+            disabled={acting}
+            className="mt-3 w-full rounded-xl bg-green-700 py-2.5 text-sm font-semibold text-white hover:bg-green-800 disabled:opacity-50"
+          >
+            {acting ? 'Working...' : 'Lift suspension'}
+          </button>
+          {actionError && <p className="mt-2 text-xs text-red-600">{actionError}</p>}
+        </div>
+      )}
       <button
         onClick={() => onOpen({ type: 'driverReviews', id })}
         className="mt-4 w-full rounded-xl border border-gray-300 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
