@@ -8,6 +8,9 @@ import { useAdminGuard } from '@/lib/useAdminGuard'
 export default function AdminTripsPage() {
   const [trips, setTrips] = useState([])
   const [loading, setLoading] = useState(true)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [cancellingId, setCancellingId] = useState(null)
+  const [cancelError, setCancelError] = useState('')
   const router = useRouter()
 
   const allowed = useAdminGuard()
@@ -50,7 +53,7 @@ export default function AdminTripsPage() {
       setLoading(false)
     }
     loadTrips()
-  }, [allowed])
+  }, [allowed, reloadKey])
 
   // Some timestamp columns (e.g. pickup/drop-off) may not exist on every
   // deployment's trips table — render "—" instead of crashing if missing.
@@ -63,6 +66,21 @@ export default function AdminTripsPage() {
     ongoing: 'text-yellow-600',
     completed: 'text-green-600',
     cancelled: 'text-red-500',
+  }
+
+  const CANCELLABLE = ['requested', 'accepted', 'arrived', 'ongoing']
+
+  const cancelTrip = async (tripId) => {
+    if (!window.confirm('Cancel this trip? The passenger and driver will see it as cancelled.')) return
+    setCancellingId(tripId)
+    setCancelError('')
+    const { error: rpcError } = await supabase.rpc('admin_cancel_trip', { p_trip_id: tripId })
+    setCancellingId(null)
+    if (rpcError) {
+      setCancelError(rpcError.message)
+      return
+    }
+    setReloadKey((k) => k + 1)
   }
 
   if (loading) {
@@ -86,6 +104,10 @@ export default function AdminTripsPage() {
         All Trips
       </h1>
 
+      {cancelError && (
+        <p className="max-w-md mx-auto mb-3 text-center text-sm text-red-600">{cancelError}</p>
+      )}
+
       {trips.length === 0 ? (
         <p className="text-center text-gray-400">No trips yet.</p>
       ) : (
@@ -103,6 +125,13 @@ export default function AdminTripsPage() {
                   ₱{Number(trip.fare || 0).toFixed(2)}
                 </span>
               </div>
+
+              {trip.status === 'cancelled' && trip.cancelled_by && (
+                <p className="text-xs text-gray-500">
+                  Cancelled by {trip.cancelled_by}
+                  {trip.cancel_reason ? ` (${String(trip.cancel_reason).replace(/_/g, ' ')})` : ''}
+                </p>
+              )}
 
               <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
                 <div>
@@ -146,6 +175,16 @@ export default function AdminTripsPage() {
                 <p>Distance: {Number(trip.distance_km || 0).toFixed(2)} km</p>
                 <p>Amount: ₱{Number(trip.fare || 0).toFixed(2)}</p>
               </div>
+
+              {CANCELLABLE.includes(trip.status) && (
+                <button
+                  onClick={() => cancelTrip(trip.id)}
+                  disabled={cancellingId === trip.id}
+                  className="w-full rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {cancellingId === trip.id ? 'Cancelling...' : 'Cancel this trip'}
+                </button>
+              )}
             </div>
           ))}
         </div>
